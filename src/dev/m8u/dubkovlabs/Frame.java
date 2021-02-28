@@ -1,10 +1,11 @@
-package dev.m8u.methodology;
+package dev.m8u.dubkovlabs;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -17,13 +18,14 @@ public class Frame extends JFrame implements ActionListener{
     JPanel canvas;
     JLabel label;
 
-    int N1 = 5, N2 = 2;
+    int N1 = 3, N2 = 5;
     float K = 0.5f, P = 0.5f;
 
     Random random;
     float currentRandomFloat;
 
     Timer timer;
+    long frameCount = 1;
 
     ArrayList<MamaBird> mamaBirds;
     ArrayList<ChildBird> childBirds;
@@ -67,17 +69,23 @@ public class Frame extends JFrame implements ActionListener{
                 g2d.clearRect(0, 0, this.getWidth(), this.getHeight());
 
                 for (MamaBird bird : mamaBirds) {
-                    bird.dvdAnimationStep();
+                    bird.animationStep();
                     bird.checkForBorders(canvas.getWidth(), canvas.getHeight());
-                   //g2d.rotate(Math.toRadians(frameCount % 360), bird.x, bird.y);
+                    AffineTransform old = g2d.getTransform();
+                    g2d.rotate(Math.toRadians(bird.angle),
+                            bird.x-bird.getImageWidth()/2.0f, bird.y+bird.getImageWidth()/2.0f);
                     bird.draw(g2d, mamaBirdImage);
+                    g2d.setTransform(old);
                 }
 
                 for (ChildBird bird : childBirds) {
-                    bird.dvdAnimationStep();
+                    bird.animationStep();
                     bird.checkForBorders(canvas.getWidth(), canvas.getHeight());
-                    //g2d.rotate(Math.toRadians(frameCount % 360), bird.x, bird.y);
+                    AffineTransform old = g2d.getTransform();
+                    g2d.rotate(Math.toRadians(bird.angle),
+                            bird.x-bird.getImageWidth()/2.0f, bird.y+bird.getImageWidth()/2.0f);
                     bird.draw(g2d, childBirdImage);
+                    g2d.setTransform(old);
                 }
             }
         };
@@ -110,18 +118,23 @@ public class Frame extends JFrame implements ActionListener{
         if (currentSec % N1 == 0 && currentRandomFloat <= P && currentSec != mamaLastSec) {
             mamaBirds.add(new MamaBird(100 + random.nextInt(canvas.getWidth() - 100),
                     random.nextInt(canvas.getHeight() - 100),
-                    1 + random.nextInt(2), 1 + random.nextInt(2)));
+                    1 + random.nextInt(2),
+                    1 + random.nextInt(2),
+                    1 + random.nextInt(3)));
             mamaLastSec = currentSec;
         }
-
 
         if (currentSec % N2 == 0 && (float) childBirds.size() / mamaBirds.size() < K && currentSec != childLastSec) {
             childBirds.add(new ChildBird(100 + random.nextInt(canvas.getWidth() - 100),
                     random.nextInt(canvas.getHeight() - 100),
-                    2 + random.nextInt(5), 2 + random.nextInt(5)));
+                    2 + random.nextInt(5),
+                    2 + random.nextInt(5),
+                    6 + random.nextInt(10)));
             childLastSec = currentSec;
         }
-        label.setText(String.valueOf(currentSec) + "s elapsed");
+        label.setText(currentSec + "s elapsed");
         canvas.repaint();
+
+        frameCount++;
     }
 }

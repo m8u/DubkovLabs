@@ -10,22 +10,30 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
+import java.time.Duration;
+import java.time.Instant;
 
 public class Frame extends JFrame implements ActionListener{
-    static JPanel canvas;
+    JPanel canvas;
+    JLabel label;
 
-    int N1 = 100, N2 = 80;
+    int N1 = 5, N2 = 2;
     float K = 0.5f, P = 0.5f;
 
     Random random;
+    float currentRandomFloat;
 
-    int frameCount = 1;
     Timer timer;
 
     ArrayList<MamaBird> mamaBirds;
     ArrayList<ChildBird> childBirds;
     BufferedImage mamaBirdImage;
     BufferedImage childBirdImage;
+
+    Instant startTime;
+
+    long mamaLastSec = -1, childLastSec = -1;
+    long randomFloatLastSec = -1;
 
     @Override
     protected void frameInit() {
@@ -34,6 +42,7 @@ public class Frame extends JFrame implements ActionListener{
     }
 
     public void init() {
+        startTime = Instant.now();
         random = new Random();
         mamaBirds = new ArrayList<>();
         childBirds = new ArrayList<>();
@@ -73,13 +82,13 @@ public class Frame extends JFrame implements ActionListener{
             }
         };
 
-        canvas.setSize(256, 512);
+        canvas.setSize(512, 512);
         left.add(canvas);
 
-        Box right = Box.createVerticalBox();
+        label = new JLabel();
+        left.add(label);
 
         this.add(left);
-        this.add(right);
 
         this.setSize(512, 512);
         this.setLocationRelativeTo(null);
@@ -91,18 +100,28 @@ public class Frame extends JFrame implements ActionListener{
     }
 
     public void actionPerformed(ActionEvent event) {
-        if (frameCount % N1 == 0 && random.nextFloat() <= P) {
+        long currentSec = Duration.between(startTime, Instant.now()).getSeconds();
+
+        if (currentSec != randomFloatLastSec ) {
+            currentRandomFloat = random.nextFloat();
+            randomFloatLastSec = currentSec;
+        }
+
+        if (currentSec % N1 == 0 && currentRandomFloat <= P && currentSec != mamaLastSec) {
             mamaBirds.add(new MamaBird(100 + random.nextInt(canvas.getWidth() - 100),
                     random.nextInt(canvas.getHeight() - 100),
                     1 + random.nextInt(2), 1 + random.nextInt(2)));
+            mamaLastSec = currentSec;
         }
 
-        if (frameCount % N2 == 0 && (float) childBirds.size() / mamaBirds.size() < K) {
+
+        if (currentSec % N2 == 0 && (float) childBirds.size() / mamaBirds.size() < K && currentSec != childLastSec) {
             childBirds.add(new ChildBird(100 + random.nextInt(canvas.getWidth() - 100),
                     random.nextInt(canvas.getHeight() - 100),
                     2 + random.nextInt(5), 2 + random.nextInt(5)));
+            childLastSec = currentSec;
         }
+        label.setText(String.valueOf(currentSec) + "s elapsed");
         canvas.repaint();
-        frameCount++;
     }
 }

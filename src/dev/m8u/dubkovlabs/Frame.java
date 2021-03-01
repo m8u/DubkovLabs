@@ -52,19 +52,19 @@ public class Frame extends JFrame implements ActionListener{
         childBirds = new ArrayList<>();
 
         try {
-            mamaBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "\\resources\\mama_bird.png" ));
-            childBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "\\resources\\child_bird.png" ));
+            mamaBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/mama_bird.png" ));
+            childBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/child_bird.png" ));
 
             mamaBirdSoundFiles = new File[] {
-                    new File(System.getProperty("user.dir") + "\\resources\\mama_bird1.wav"),
-                    new File(System.getProperty("user.dir") + "\\resources\\mama_bird2.wav"),
-                    new File(System.getProperty("user.dir") + "\\resources\\mama_bird3.wav"),
-                    new File(System.getProperty("user.dir") + "\\resources\\mama_bird4.wav")
+                    new File(System.getProperty("user.dir") + "/resources/mama_bird1.wav"),
+                    new File(System.getProperty("user.dir") + "/resources/mama_bird2.wav"),
+                    new File(System.getProperty("user.dir") + "/resources/mama_bird3.wav"),
+                    new File(System.getProperty("user.dir") + "/resources/mama_bird4.wav")
             };
             childBirdSoundFiles = new File[] {
-                    new File(System.getProperty("user.dir") + "\\resources\\child_bird1.wav"),
-                    new File(System.getProperty("user.dir") + "\\resources\\child_bird2.wav"),
-                    new File(System.getProperty("user.dir") + "\\resources\\child_bird3.wav")
+                    new File(System.getProperty("user.dir") + "/resources/child_bird1.wav"),
+                    new File(System.getProperty("user.dir") + "/resources/child_bird2.wav"),
+                    new File(System.getProperty("user.dir") + "/resources/child_bird3.wav")
             };
         } catch (IOException e) {
             e.printStackTrace();

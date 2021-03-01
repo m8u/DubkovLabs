@@ -7,8 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Random;
 import java.time.Duration;
@@ -32,6 +31,9 @@ public class Frame extends JFrame implements ActionListener{
     BufferedImage mamaBirdImage;
     BufferedImage childBirdImage;
 
+    File[] mamaBirdSoundFiles;
+    File[] childBirdSoundFiles;
+
     Instant startTime;
 
     long mamaLastSec = -1, childLastSec = -1;
@@ -50,8 +52,20 @@ public class Frame extends JFrame implements ActionListener{
         childBirds = new ArrayList<>();
 
         try {
-            mamaBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/mama_bird.png" ));
-            childBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/child_bird.png" ));
+            mamaBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "\\resources\\mama_bird.png" ));
+            childBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "\\resources\\child_bird.png" ));
+
+            mamaBirdSoundFiles = new File[] {
+                    new File(System.getProperty("user.dir") + "\\resources\\mama_bird1.wav"),
+                    new File(System.getProperty("user.dir") + "\\resources\\mama_bird2.wav"),
+                    new File(System.getProperty("user.dir") + "\\resources\\mama_bird3.wav"),
+                    new File(System.getProperty("user.dir") + "\\resources\\mama_bird4.wav")
+            };
+            childBirdSoundFiles = new File[] {
+                    new File(System.getProperty("user.dir") + "\\resources\\child_bird1.wav"),
+                    new File(System.getProperty("user.dir") + "\\resources\\child_bird2.wav"),
+                    new File(System.getProperty("user.dir") + "\\resources\\child_bird3.wav")
+            };
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -70,7 +84,9 @@ public class Frame extends JFrame implements ActionListener{
 
                 for (MamaBird bird : mamaBirds) {
                     bird.animationStep();
-                    bird.checkForBorders(canvas.getWidth(), canvas.getHeight());
+                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight())) {
+                        bird.cluck(mamaBirdSoundFiles[random.nextInt(mamaBirdSoundFiles.length)]);
+                    }
                     AffineTransform old = g2d.getTransform();
                     g2d.rotate(Math.toRadians(bird.angle),
                             bird.x-bird.getImageWidth()/2.0f, bird.y+bird.getImageWidth()/2.0f);
@@ -80,7 +96,9 @@ public class Frame extends JFrame implements ActionListener{
 
                 for (ChildBird bird : childBirds) {
                     bird.animationStep();
-                    bird.checkForBorders(canvas.getWidth(), canvas.getHeight());
+                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight())) {
+                        bird.cluck(childBirdSoundFiles[random.nextInt(childBirdSoundFiles.length)]);
+                    }
                     AffineTransform old = g2d.getTransform();
                     g2d.rotate(Math.toRadians(bird.angle),
                             bird.x-bird.getImageWidth()/2.0f, bird.y+bird.getImageWidth()/2.0f);
@@ -114,7 +132,6 @@ public class Frame extends JFrame implements ActionListener{
             currentRandomFloat = random.nextFloat();
             randomFloatLastSec = currentSec;
         }
-
         if (currentSec % N1 == 0 && currentRandomFloat <= P && currentSec != mamaLastSec) {
             mamaBirds.add(new MamaBird(100 + random.nextInt(canvas.getWidth() - 100),
                     random.nextInt(canvas.getHeight() - 100),
@@ -123,7 +140,6 @@ public class Frame extends JFrame implements ActionListener{
                     1 + random.nextInt(3)));
             mamaLastSec = currentSec;
         }
-
         if (currentSec % N2 == 0 && (float) childBirds.size() / mamaBirds.size() < K && currentSec != childLastSec) {
             childBirds.add(new ChildBird(100 + random.nextInt(canvas.getWidth() - 100),
                     random.nextInt(canvas.getHeight() - 100),
@@ -133,6 +149,7 @@ public class Frame extends JFrame implements ActionListener{
             childLastSec = currentSec;
         }
         label.setText(currentSec + "s elapsed");
+
         canvas.repaint();
 
         frameCount++;

@@ -50,8 +50,8 @@ public class Frame extends JFrame implements ActionListener{
         childBirds = new ArrayList<>();
 
         try {
-            mamaBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "\\resources\\mama_bird.png" ));
-            childBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "\\resources\\child_bird.png" ));
+            mamaBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/mama_bird.png" ));
+            childBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/child_bird.png" ));
         } catch (IOException e) {
             e.printStackTrace();
         }

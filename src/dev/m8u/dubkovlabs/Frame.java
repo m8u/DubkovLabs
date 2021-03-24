@@ -2,6 +2,8 @@ package dev.m8u.dubkovlabs;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -15,7 +17,7 @@ import java.time.Instant;
 
 public class Frame extends JFrame implements ActionListener{
     JPanel canvas;
-    JLabel label;
+    JLabel timerLabel;
 
     int N1 = 3, N2 = 5;
     float K = 0.5f, P = 0.5f;
@@ -72,7 +74,7 @@ public class Frame extends JFrame implements ActionListener{
 
         this.setLayout(new BoxLayout(this.getContentPane(), BoxLayout.X_AXIS));
 
-        Box left = Box.createVerticalBox();
+        Box left = new Box(BoxLayout.Y_AXIS);
         canvas = new JPanel() {
             @Override
             public void paintComponent(Graphics g) {
@@ -111,10 +113,42 @@ public class Frame extends JFrame implements ActionListener{
         canvas.setSize(512, 512);
         left.add(canvas);
 
-        label = new JLabel();
-        left.add(label);
+        timerLabel = new JLabel();
+        left.add(timerLabel);
 
         this.add(left);
+
+        JPanel right = new JPanel();
+        GridLayout gridLayout = new GridLayout(20, 0);
+        gridLayout.setVgap(5);
+        right.setLayout(gridLayout);
+        right.setMaximumSize(new Dimension(64, 512));
+
+        JSpinner mamaSpinner = new JSpinner();
+
+        mamaSpinner.setModel(new SpinnerNumberModel(3, 1, 10, 1));
+        mamaSpinner.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mamaSpinner.addChangeListener(listener -> {
+            N1 = (int) mamaSpinner.getValue();
+        });
+
+        JSpinner childSpinner = new JSpinner();
+        childSpinner.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        childSpinner.setModel(new SpinnerNumberModel(5, 1, 10, 1));
+        childSpinner.addChangeListener(listener -> {
+            N2 = (int) childSpinner.getValue();
+        });
+
+        JLabel jopa = new JLabel();
+        jopa.setText("jopa syela govno");
+        jopa.setHorizontalAlignment(JLabel.CENTER);
+
+        right.add(mamaSpinner);
+        right.add(childSpinner);
+        right.add(jopa);
+
+        this.add(right);
 
         this.setSize(512, 512);
         this.setLocationRelativeTo(null);
@@ -148,7 +182,7 @@ public class Frame extends JFrame implements ActionListener{
                     6 + random.nextInt(10)));
             childLastSec = currentSec;
         }
-        label.setText(currentSec + "s elapsed");
+        timerLabel.setText(currentSec + "s elapsed");
 
         canvas.repaint();
 

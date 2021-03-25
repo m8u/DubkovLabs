@@ -28,7 +28,7 @@ public abstract class Bird {
 
     public boolean checkForBorders(int width, int height) {
         boolean collided = false;
-        if (this.x - getImageWidth()< 0 || this.x > width) {
+        if (this.x - getImageWidth() < 0 || this.x > width) {
             xVel = -xVel;
             angleVel = -angleVel;
             collided = true;

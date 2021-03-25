@@ -2,13 +2,15 @@ package dev.m8u.dubkovlabs;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Random;
@@ -18,6 +20,8 @@ import java.time.Instant;
 public class Frame extends JFrame implements ActionListener{
     JPanel canvas;
     JLabel timerLabel;
+    JLabel mamaBirdCountLabel;
+    JLabel childBirdCountLabel;
 
     int N1 = 3, N2 = 5;
     float K = 0.5f, P = 0.5f;
@@ -72,7 +76,8 @@ public class Frame extends JFrame implements ActionListener{
             e.printStackTrace();
         }
 
-        this.setLayout(new BoxLayout(this.getContentPane(), BoxLayout.X_AXIS));
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane.setResizeWeight(1.0);
 
         Box left = new Box(BoxLayout.Y_AXIS);
         canvas = new JPanel() {
@@ -83,6 +88,7 @@ public class Frame extends JFrame implements ActionListener{
                 Graphics2D g2d = (Graphics2D) g;
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.clearRect(0, 0, this.getWidth(), this.getHeight());
+                g2d.setColor(Color.WHITE);
 
                 for (MamaBird bird : mamaBirds) {
                     bird.animationStep();
@@ -110,47 +116,118 @@ public class Frame extends JFrame implements ActionListener{
             }
         };
 
-        canvas.setSize(512, 512);
         left.add(canvas);
 
-        timerLabel = new JLabel();
-        left.add(timerLabel);
+        splitPane.setLeftComponent(left);
 
-        this.add(left);
-
-        JPanel right = new JPanel();
-        GridLayout gridLayout = new GridLayout(20, 0);
-        gridLayout.setVgap(5);
-        right.setLayout(gridLayout);
+        JPanel right = new JPanel(new GridBagLayout());
+        //right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
         right.setMaximumSize(new Dimension(64, 512));
+        right.setBorder(new EmptyBorder(8, 8, 8, 8));
 
+        JPanel paramsPanel = new JPanel();
+        paramsPanel.setBorder(new TitledBorder("Parameters"));
+        GridLayout paramsGridLayout = new GridLayout(4, 0);
+        paramsGridLayout.setVgap(5);
+        paramsPanel.setLayout(paramsGridLayout);
+
+        JPanel mamaSpinnerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JSpinner mamaSpinner = new JSpinner();
-
         mamaSpinner.setModel(new SpinnerNumberModel(3, 1, 10, 1));
-        mamaSpinner.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mamaSpinner.addChangeListener(listener -> {
+        mamaSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
+        mamaSpinner.addChangeListener(e -> {
             N1 = (int) mamaSpinner.getValue();
         });
+        mamaSpinner.setToolTipText("Chicken spawn interval (s)");
+        mamaSpinnerPanel.add(new JLabel("N1:"));
+        mamaSpinnerPanel.add(mamaSpinner);
 
+
+        JPanel mamaSliderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JSlider mamaSlider = new JSlider();
+        mamaSlider.setModel(new DefaultBoundedRangeModel(50, 1, 0, 100+1));
+        JLabel mamaSliderValueLabel = new JLabel(mamaSlider.getValue() + "%");
+        mamaSliderValueLabel.setPreferredSize(new Dimension(mamaSliderValueLabel.getFontMetrics(mamaSliderValueLabel.getFont()).stringWidth("100%"), mamaSliderValueLabel.getPreferredSize().height));
+        mamaSlider.addChangeListener(e -> {
+            P = mamaSlider.getValue() / 100.0f;
+            mamaSliderValueLabel.setText(mamaSlider.getValue() + "%");
+        });
+        mamaSlider.setToolTipText("Chicken spawn probability (%)");
+        mamaSliderPanel.add(new JLabel("P:"));
+        mamaSliderPanel.add(mamaSlider);
+        mamaSliderPanel.add(mamaSliderValueLabel);
+
+
+        JPanel childSpinnerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JSpinner childSpinner = new JSpinner();
-        childSpinner.setAlignmentX(Component.CENTER_ALIGNMENT);
-
+        childSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
         childSpinner.setModel(new SpinnerNumberModel(5, 1, 10, 1));
-        childSpinner.addChangeListener(listener -> {
+        childSpinner.addChangeListener(e -> {
             N2 = (int) childSpinner.getValue();
         });
+        childSpinner.setToolTipText("Baby chick spawn interval (s)");
+        childSpinnerPanel.add(new JLabel("N2:"));
+        childSpinnerPanel.add(childSpinner);
 
-        JLabel jopa = new JLabel();
-        jopa.setText("jopa syela govno");
-        jopa.setHorizontalAlignment(JLabel.CENTER);
 
-        right.add(mamaSpinner);
-        right.add(childSpinner);
-        right.add(jopa);
+        JPanel childSliderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JSlider childSlider = new JSlider();
+        childSlider.setModel(new DefaultBoundedRangeModel(50, 1, 0, 100+1));
+        JLabel childSliderValueLabel = new JLabel(childSlider.getValue() + "%");
+        childSliderValueLabel.setPreferredSize(new Dimension(childSliderValueLabel.getFontMetrics(childSliderValueLabel.getFont()).stringWidth("100%"), childSliderValueLabel.getPreferredSize().height));
+        childSlider.addChangeListener(e -> {
+            K = childSlider.getValue() / 100.0f;
+            childSliderValueLabel.setText(childSlider.getValue() + "%");
+        });
+        childSlider.setToolTipText("Baby chicks ratio (%)");
+        childSliderPanel.add(new JLabel("K:"));
+        childSliderPanel.add(childSlider);
+        childSliderPanel.add(childSliderValueLabel);
 
-        this.add(right);
+        paramsPanel.add(mamaSpinnerPanel);
+        paramsPanel.add(mamaSliderPanel);
+        paramsPanel.add(childSpinnerPanel);
+        paramsPanel.add(childSliderPanel);
 
-        this.setSize(512, 512);
+        JPanel statsPanel = new JPanel();
+        statsPanel.setBorder(new TitledBorder("Stats"));
+        GridLayout statsGridLayout = new GridLayout(3, 0);
+        statsGridLayout.setVgap(5);
+        statsPanel.setLayout(statsGridLayout);
+
+        mamaBirdCountLabel = new JLabel("Chicken count: " + mamaBirds.size());
+        childBirdCountLabel = new JLabel("Baby chick count: " + childBirds.size());
+        timerLabel = new JLabel();
+        mamaBirdCountLabel.setBorder(new EmptyBorder(4, 4, 4, 4));
+        childBirdCountLabel.setBorder(new EmptyBorder(4, 4, 4, 4));
+        timerLabel.setBorder(new EmptyBorder(4, 4, 4, 4));
+
+        statsPanel.add(mamaBirdCountLabel);
+        statsPanel.add(childBirdCountLabel);
+        statsPanel.add(timerLabel);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.anchor = GridBagConstraints.PAGE_START;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weighty = 1;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        right.add(paramsPanel, gbc);
+        gbc.anchor = GridBagConstraints.PAGE_END;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        right.add(statsPanel, gbc);
+
+        splitPane.setRightComponent(right);
+
+        splitPane.addPropertyChangeListener("dividerLocation", e -> {
+            if (splitPane.getLastDividerLocation() <= 0)
+                splitPane.setDividerLocation(splitPane.getLastDividerLocation());
+        });
+
+        this.add(splitPane);
+
+        this.setSize(800, 600);
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setVisible(true);
@@ -173,6 +250,7 @@ public class Frame extends JFrame implements ActionListener{
                     1 + random.nextInt(2),
                     1 + random.nextInt(3)));
             mamaLastSec = currentSec;
+            mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.size());
         }
         if (currentSec % N2 == 0 && (float) childBirds.size() / mamaBirds.size() < K && currentSec != childLastSec) {
             childBirds.add(new ChildBird(100 + random.nextInt(canvas.getWidth() - 100),
@@ -181,8 +259,9 @@ public class Frame extends JFrame implements ActionListener{
                     2 + random.nextInt(5),
                     6 + random.nextInt(10)));
             childLastSec = currentSec;
+            childBirdCountLabel.setText("Baby chick count: " + childBirds.size());
         }
-        timerLabel.setText(currentSec + "s elapsed");
+        timerLabel.setText(String.format("Time elapsed: %02d:%02d", currentSec/60, currentSec%60));
 
         canvas.repaint();
 

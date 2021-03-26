@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public abstract class Bird {
     private int imageWidth;
-    int x, y, xVel, yVel, angle, angleVel;
+    int x, y, xVel, yVel, angle, angleVel, collisionsInRow;
 
     Bird(int x, int y, int xVel, int yVel, int angleVel) {
         this.x = x;
@@ -17,6 +17,7 @@ public abstract class Bird {
         this.yVel = yVel;
         this.angle = 0;
         this.angleVel = angleVel;
+        this.collisionsInRow = 0;
     }
 
     public void animationStep() {
@@ -37,6 +38,12 @@ public abstract class Bird {
             yVel = -yVel;
             collided = true;
         }
+
+        if (collided)
+            this.collisionsInRow++;
+        else
+            this.collisionsInRow = 0;
+
         return collided;
     }
 
@@ -56,7 +63,7 @@ public abstract class Bird {
                 clip.open(AudioSystem.getAudioInputStream(soundFile));
                 clip.start();
             } catch (LineUnavailableException | IOException | UnsupportedAudioFileException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
             }
         }).start();
     }

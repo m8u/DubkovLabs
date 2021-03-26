@@ -9,8 +9,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Random;
@@ -92,7 +90,7 @@ public class Frame extends JFrame implements ActionListener{
 
                 for (MamaBird bird : mamaBirds) {
                     bird.animationStep();
-                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight())) {
+                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 10) {
                         bird.cluck(mamaBirdSoundFiles[random.nextInt(mamaBirdSoundFiles.length)]);
                     }
                     AffineTransform old = g2d.getTransform();
@@ -104,7 +102,7 @@ public class Frame extends JFrame implements ActionListener{
 
                 for (ChildBird bird : childBirds) {
                     bird.animationStep();
-                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight())) {
+                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 10) {
                         bird.cluck(childBirdSoundFiles[random.nextInt(childBirdSoundFiles.length)]);
                     }
                     AffineTransform old = g2d.getTransform();
@@ -116,12 +114,12 @@ public class Frame extends JFrame implements ActionListener{
             }
         };
 
+        canvas.setSize(512, 512);
         left.add(canvas);
 
         splitPane.setLeftComponent(left);
 
         JPanel right = new JPanel(new GridBagLayout());
-        //right.setLayout(new BoxLayout(right, BoxLayout.Y_AXIS));
         right.setMaximumSize(new Dimension(64, 512));
         right.setBorder(new EmptyBorder(8, 8, 8, 8));
 

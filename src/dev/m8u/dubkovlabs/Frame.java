@@ -90,7 +90,7 @@ public class Frame extends JFrame implements ActionListener{
 
                 for (MamaBird bird : mamaBirds) {
                     bird.animationStep();
-                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 10) {
+                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 50) {
                         bird.cluck(mamaBirdSoundFiles[random.nextInt(mamaBirdSoundFiles.length)]);
                     }
                     AffineTransform old = g2d.getTransform();
@@ -102,7 +102,7 @@ public class Frame extends JFrame implements ActionListener{
 
                 for (ChildBird bird : childBirds) {
                     bird.animationStep();
-                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 10) {
+                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 50) {
                         bird.cluck(childBirdSoundFiles[random.nextInt(childBirdSoundFiles.length)]);
                     }
                     AffineTransform old = g2d.getTransform();
@@ -114,7 +114,6 @@ public class Frame extends JFrame implements ActionListener{
             }
         };
 
-        canvas.setSize(512, 512);
         left.add(canvas);
 
         splitPane.setLeftComponent(left);
@@ -235,6 +234,9 @@ public class Frame extends JFrame implements ActionListener{
     }
 
     public void actionPerformed(ActionEvent event) {
+        if (canvas.getWidth() == 0)
+            canvas.setSize(512, 512);
+
         long currentSec = Duration.between(startTime, Instant.now()).getSeconds();
 
         if (currentSec != randomFloatLastSec ) {

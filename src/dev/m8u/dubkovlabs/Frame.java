@@ -89,10 +89,6 @@ public class Frame extends JFrame implements ActionListener{
                 g2d.setColor(Color.WHITE);
 
                 for (MamaBird bird : mamaBirds) {
-                    bird.animationStep();
-                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 50) {
-                        bird.cluck(mamaBirdSoundFiles[random.nextInt(mamaBirdSoundFiles.length)]);
-                    }
                     AffineTransform old = g2d.getTransform();
                     g2d.rotate(Math.toRadians(bird.angle),
                             bird.x-bird.getImageWidth()/2.0f, bird.y+bird.getImageWidth()/2.0f);
@@ -101,10 +97,6 @@ public class Frame extends JFrame implements ActionListener{
                 }
 
                 for (ChildBird bird : childBirds) {
-                    bird.animationStep();
-                    if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 50) {
-                        bird.cluck(childBirdSoundFiles[random.nextInt(childBirdSoundFiles.length)]);
-                    }
                     AffineTransform old = g2d.getTransform();
                     g2d.rotate(Math.toRadians(bird.angle),
                             bird.x-bird.getImageWidth()/2.0f, bird.y+bird.getImageWidth()/2.0f);
@@ -113,6 +105,7 @@ public class Frame extends JFrame implements ActionListener{
                 }
             }
         };
+
 
         left.add(canvas);
 
@@ -262,6 +255,19 @@ public class Frame extends JFrame implements ActionListener{
             childBirdCountLabel.setText("Baby chick count: " + childBirds.size());
         }
         timerLabel.setText(String.format("Time elapsed: %02d:%02d", currentSec/60, currentSec%60));
+
+        for (MamaBird bird : mamaBirds) {
+            bird.animationStep();
+            if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 50) {
+                bird.cluck(mamaBirdSoundFiles[random.nextInt(mamaBirdSoundFiles.length)]);
+            }
+        }
+        for (ChildBird bird : childBirds) {
+            bird.animationStep();
+            if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 50) {
+                bird.cluck(childBirdSoundFiles[random.nextInt(childBirdSoundFiles.length)]);
+            }
+        }
 
         canvas.repaint();
 

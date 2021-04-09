@@ -2,8 +2,8 @@ package dev.m8u.dubkovlabs;
 
 public class ChildBird extends Bird {
 
-    ChildBird(int x, int y, int xVel, int yVel, int angleVel) {
-        super(x, y, xVel, yVel, angleVel);
+    ChildBird(int x, int y, int xVel, int yVel, int angle, int angleVel) {
+        super(x, y, xVel, yVel, angle, angleVel);
     }
 
     @Override

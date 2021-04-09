@@ -11,6 +11,7 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Random;
 import java.time.Duration;
 import java.time.Instant;
@@ -21,7 +22,7 @@ public class Frame extends JFrame implements ActionListener{
     JLabel mamaBirdCountLabel;
     JLabel childBirdCountLabel;
 
-    int N1 = 3, N2 = 5;
+    int N1 = 3, N2 = 1, birdsLifespan = 30;
     float K = 0.5f, P = 0.5f;
 
     Random random;
@@ -32,8 +33,14 @@ public class Frame extends JFrame implements ActionListener{
 
     ArrayList<MamaBird> mamaBirds;
     ArrayList<ChildBird> childBirds;
+    ArrayList<MamaBird> deadBirds;
+
     BufferedImage mamaBirdImage;
+    BufferedImage eggImage;
+    BufferedImage childBirdEggImage;
     BufferedImage childBirdImage;
+    BufferedImage birdSoulImage;
+    BufferedImage hayBackgroundImage;
 
     File[] mamaBirdSoundFiles;
     File[] childBirdSoundFiles;
@@ -54,10 +61,16 @@ public class Frame extends JFrame implements ActionListener{
         random = new Random();
         mamaBirds = new ArrayList<>();
         childBirds = new ArrayList<>();
+        deadBirds = new ArrayList<>();
 
         try {
             mamaBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/mama_bird.png" ));
+            eggImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/egg.png" ));
+            childBirdEggImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/child_bird_egg.png" ));
             childBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/child_bird.png" ));
+            birdSoulImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/bird_soul.png" ));
+            hayBackgroundImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/hay.png" ));
+
 
             mamaBirdSoundFiles = new File[] {
                     new File(System.getProperty("user.dir") + "/resources/mama_bird1.wav"),
@@ -77,16 +90,21 @@ public class Frame extends JFrame implements ActionListener{
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setResizeWeight(1.0);
 
+
         Box left = new Box(BoxLayout.Y_AXIS);
         canvas = new JPanel() {
             @Override
             public void paintComponent(Graphics g) {
                 super.paintComponent(g);
 
+
                 Graphics2D g2d = (Graphics2D) g;
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
                 g2d.clearRect(0, 0, this.getWidth(), this.getHeight());
-                g2d.setColor(Color.WHITE);
+                for (int y = 0; y < canvas.getHeight(); y+=hayBackgroundImage.getHeight())
+                    for (int x = 0; x < canvas.getWidth(); x+=hayBackgroundImage.getWidth())
+                        g2d.drawImage(hayBackgroundImage, x, y, null);
 
                 for (MamaBird bird : mamaBirds) {
                     AffineTransform old = g2d.getTransform();
@@ -100,12 +118,21 @@ public class Frame extends JFrame implements ActionListener{
                     AffineTransform old = g2d.getTransform();
                     g2d.rotate(Math.toRadians(bird.angle),
                             bird.x-bird.getImageWidth()/2.0f, bird.y+bird.getImageWidth()/2.0f);
-                    bird.draw(g2d, childBirdImage);
+                    if (bird.secondsAlive < birdsLifespan / 10.0f)
+                        bird.draw(g2d, eggImage);
+                    else if (bird.secondsAlive < birdsLifespan / 6.0f)
+                        bird.draw(g2d, childBirdEggImage);
+                    else
+                        bird.draw(g2d, childBirdImage);
                     g2d.setTransform(old);
                 }
+
+                for (MamaBird bird : deadBirds) {
+                    bird.draw(g2d, birdSoulImage);
+                }
+
             }
         };
-
 
         left.add(canvas);
 
@@ -117,7 +144,7 @@ public class Frame extends JFrame implements ActionListener{
 
         JPanel paramsPanel = new JPanel();
         paramsPanel.setBorder(new TitledBorder("Parameters"));
-        GridLayout paramsGridLayout = new GridLayout(4, 0);
+        GridLayout paramsGridLayout = new GridLayout(5, 0);
         paramsGridLayout.setVgap(5);
         paramsPanel.setLayout(paramsGridLayout);
 
@@ -151,7 +178,7 @@ public class Frame extends JFrame implements ActionListener{
         JPanel childSpinnerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JSpinner childSpinner = new JSpinner();
         childSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
-        childSpinner.setModel(new SpinnerNumberModel(5, 1, 10, 1));
+        childSpinner.setModel(new SpinnerNumberModel(1, 1, 10, 1));
         childSpinner.addChangeListener(e -> {
             N2 = (int) childSpinner.getValue();
         });
@@ -174,10 +201,24 @@ public class Frame extends JFrame implements ActionListener{
         childSliderPanel.add(childSlider);
         childSliderPanel.add(childSliderValueLabel);
 
+
+        JPanel lifespanSpinnerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JSpinner lifespanSpinner = new JSpinner();
+        lifespanSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lifespanSpinner.setModel(new SpinnerNumberModel(30, 1, 60, 1));
+        lifespanSpinner.addChangeListener(e -> {
+            birdsLifespan = (int) lifespanSpinner.getValue();
+        });
+        lifespanSpinner.setToolTipText("Birds lifespan (s)");
+        lifespanSpinnerPanel.add(new JLabel("Lifespan:"));
+        lifespanSpinnerPanel.add(lifespanSpinner);
+
+
         paramsPanel.add(mamaSpinnerPanel);
         paramsPanel.add(mamaSliderPanel);
         paramsPanel.add(childSpinnerPanel);
         paramsPanel.add(childSliderPanel);
+        paramsPanel.add(lifespanSpinnerPanel);
 
         JPanel statsPanel = new JPanel();
         statsPanel.setBorder(new TitledBorder("Stats"));
@@ -236,37 +277,75 @@ public class Frame extends JFrame implements ActionListener{
             currentRandomFloat = random.nextFloat();
             randomFloatLastSec = currentSec;
         }
-        if (currentSec % N1 == 0 && currentRandomFloat <= P && currentSec != mamaLastSec) {
-            mamaBirds.add(new MamaBird(100 + random.nextInt(canvas.getWidth() - 100),
-                    random.nextInt(canvas.getHeight() - 100),
-                    1 + random.nextInt(2),
-                    1 + random.nextInt(2),
-                    1 + random.nextInt(3)));
+        if (currentSec != mamaLastSec) {
+            for (MamaBird bird : mamaBirds) {
+                bird.secondsAlive++;
+            }
+            if (currentSec % N1 == 0 && currentRandomFloat <= P) {
+                mamaBirds.add(new MamaBird(170 + random.nextInt(canvas.getWidth() - 170*2),
+                        170 + random.nextInt(canvas.getHeight() - 170*2),
+                        1 + random.nextInt(2),
+                        1 + random.nextInt(2),
+                        0,
+                        1 + random.nextInt(3)));
+                mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.size());
+            }
             mamaLastSec = currentSec;
-            mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.size());
         }
-        if (currentSec % N2 == 0 && (float) childBirds.size() / mamaBirds.size() < K && currentSec != childLastSec) {
-            childBirds.add(new ChildBird(100 + random.nextInt(canvas.getWidth() - 100),
-                    random.nextInt(canvas.getHeight() - 100),
-                    2 + random.nextInt(5),
-                    2 + random.nextInt(5),
-                    6 + random.nextInt(10)));
+        if (currentSec != childLastSec) {
+            for (ChildBird bird : childBirds) {
+                bird.secondsAlive++;
+            }
+            if (currentSec % N2 == 0 && (float) childBirds.size() / mamaBirds.size() < K) {
+                childBirds.add(new ChildBird((canvas.getWidth()/2 + (random.nextInt(50) - 25)),
+                        (canvas.getHeight()/2 + (random.nextInt(50) - 25)),
+                        2 + random.nextInt(5),
+                        2 + random.nextInt(5),
+                        0,
+                        6 + random.nextInt(10)));
+                childLastSec = currentSec;
+                childBirdCountLabel.setText("Baby chick count: " + childBirds.size());
+            }
             childLastSec = currentSec;
-            childBirdCountLabel.setText("Baby chick count: " + childBirds.size());
         }
         timerLabel.setText(String.format("Time elapsed: %02d:%02d", currentSec/60, currentSec%60));
 
-        for (MamaBird bird : mamaBirds) {
+        for (Iterator<MamaBird> iterator = mamaBirds.iterator(); iterator.hasNext();) {
+            MamaBird bird = iterator.next();
+            if (bird.secondsAlive > birdsLifespan) {
+                iterator.remove();
+                deadBirds.add(new MamaBird(bird.x, bird.y, 0, -4, 0, 0));
+                mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.size());
+            }
             bird.animationStep();
             if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 50) {
                 bird.cluck(mamaBirdSoundFiles[random.nextInt(mamaBirdSoundFiles.length)]);
             }
         }
-        for (ChildBird bird : childBirds) {
-            bird.animationStep();
+        for (Iterator<ChildBird> iterator = childBirds.iterator(); iterator.hasNext();) {
+            ChildBird bird = iterator.next();
+            if (bird.secondsAlive >= birdsLifespan / 3.0f) {
+                iterator.remove();
+                childBirdCountLabel.setText("Baby chick count: " + childBirds.size());
+                mamaBirds.add(new MamaBird(bird.x, bird.y,
+                        (bird.xVel > 0 ? 1 + random.nextInt(2) : (1 + random.nextInt(2)) * -1),
+                        (bird.yVel > 0 ? 1 + random.nextInt(2) : 1 + (random.nextInt(2)) * -1),
+                        bird.angle,
+                        (bird.angleVel > 0 ? 1 + random.nextInt(3) : (1 + random.nextInt(3)) * -1)));
+                mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.size());
+            }
+            if (bird.secondsAlive >= birdsLifespan / 6.0f)
+                bird.animationStep();
             if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 50) {
                 bird.cluck(childBirdSoundFiles[random.nextInt(childBirdSoundFiles.length)]);
             }
+        }
+        for (Iterator<MamaBird> iterator = deadBirds.iterator(); iterator.hasNext();) {
+            MamaBird bird = iterator.next();
+            if (bird.y + bird.getImageWidth() < 0) {
+                iterator.remove();
+            }
+            bird.animationStep();
         }
 
         canvas.repaint();

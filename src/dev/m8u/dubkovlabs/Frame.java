@@ -3,6 +3,7 @@ package dev.m8u.dubkovlabs;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -16,7 +17,7 @@ import java.util.Random;
 import java.time.Duration;
 import java.time.Instant;
 
-public class Frame extends JFrame implements ActionListener{
+public class Frame extends JFrame implements ActionListener {
     JPanel canvas;
     JLabel timerLabel;
     JLabel mamaBirdCountLabel;
@@ -46,6 +47,7 @@ public class Frame extends JFrame implements ActionListener{
     File[] childBirdSoundFiles;
 
     Instant startTime;
+    Instant pauseTime;
 
     long mamaLastSec = -1, childLastSec = -1;
     long randomFloatLastSec = -1;
@@ -220,6 +222,27 @@ public class Frame extends JFrame implements ActionListener{
         paramsPanel.add(childSliderPanel);
         paramsPanel.add(lifespanSpinnerPanel);
 
+        JPanel actionsPanel = new JPanel();
+        actionsPanel.setBorder(new TitledBorder("Actions"));
+        GridLayout actionGridLayout = new GridLayout(1, 0);
+        actionGridLayout.setVgap(5);
+        actionsPanel.setLayout(actionGridLayout);
+
+        JButton pauseButton = new JButton("Pause simulation");
+        pauseButton.addActionListener((e) -> {
+            if (timer.isRunning()) {
+                timer.stop();
+                pauseTime = Instant.now();
+                pauseButton.setText("Resume simulation");
+            } else {
+                startTime = startTime.plus(Duration.between(pauseTime, Instant.now()));
+                timer.start();
+                pauseButton.setText("Pause simulation");
+            }
+        });
+
+        actionsPanel.add(pauseButton);
+
         JPanel statsPanel = new JPanel();
         statsPanel.setBorder(new TitledBorder("Stats"));
         GridLayout statsGridLayout = new GridLayout(3, 0);
@@ -244,9 +267,13 @@ public class Frame extends JFrame implements ActionListener{
         gbc.gridx = 0;
         gbc.gridy = 0;
         right.add(paramsPanel, gbc);
-        gbc.anchor = GridBagConstraints.PAGE_END;
+        gbc.anchor = GridBagConstraints.CENTER;
         gbc.gridx = 0;
         gbc.gridy = 1;
+        right.add(actionsPanel, gbc);
+        gbc.anchor = GridBagConstraints.PAGE_END;
+        gbc.gridx = 0;
+        gbc.gridy = 2;
         right.add(statsPanel, gbc);
 
         splitPane.setRightComponent(right);
@@ -268,10 +295,12 @@ public class Frame extends JFrame implements ActionListener{
     }
 
     public void actionPerformed(ActionEvent event) {
+
         if (canvas.getWidth() == 0)
             canvas.setSize(512, 512);
 
         long currentSec = Duration.between(startTime, Instant.now()).getSeconds();
+
 
         if (currentSec != randomFloatLastSec ) {
             currentRandomFloat = random.nextFloat();

@@ -5,8 +5,9 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 
-public abstract class Bird {
+public abstract class Bird implements Serializable {
     private int imageWidth;
     int x, y,
         xVel, yVel,

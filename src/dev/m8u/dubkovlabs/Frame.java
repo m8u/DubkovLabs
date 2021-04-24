@@ -233,7 +233,7 @@ public class Frame extends JFrame implements ActionListener {
             pauseToggle(true);
             JFileChooser fileChooser = new JFileChooser();
             fileChooser.setSelectedFile(new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()+"/save.sav"));
-            int result = fileChooser.showOpenDialog(this);
+            int result = fileChooser.showSaveDialog(this);
             if (result == JFileChooser.CANCEL_OPTION || result == JFileChooser.ABORT) {
                 pauseToggle(true);
                 return;

@@ -1,4 +1,4 @@
-package dev.m8u.dubkovlabs;
+package dev.m8u.dubkovlabsserver;
 
 public class ChildBird extends Bird {
 

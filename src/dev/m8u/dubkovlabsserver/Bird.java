@@ -1,4 +1,4 @@
-package dev.m8u.dubkovlabs;
+package dev.m8u.dubkovlabsserver;
 
 import javax.sound.sampled.*;
 import java.awt.*;
@@ -7,16 +7,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 
-public abstract class Bird implements Serializable {
+public class Bird implements Serializable {
     private int imageWidth;
     int x, y,
         xVel, yVel,
         angle, angleVel,
         collisionsInRow,
         secondsAlive;
-    boolean isStuck;
+    boolean isStuck, shouldCluck;
 
-    Bird(int x, int y, int xVel, int yVel, int angle, int angleVel) {
+    public Bird(int x, int y, int xVel, int yVel, int angle, int angleVel) {
         this.x = x;
         this.y = y;
         this.xVel = xVel;
@@ -25,6 +25,7 @@ public abstract class Bird implements Serializable {
         this.angleVel = angleVel;
         this.collisionsInRow = 0;
         this.isStuck = false;
+        this.shouldCluck = false;
         this.secondsAlive = 0;
     }
 
@@ -78,20 +79,4 @@ public abstract class Bird implements Serializable {
         return imageWidth;
     }
 
-    public void draw(Graphics2D g2d, BufferedImage image) {
-        g2d.drawImage(image, this.x, this.y, -getImageWidth(), getImageWidth(), null);
-    }
-
-    public void cluck(File soundFile) {
-        new Thread(() -> {
-            Clip clip;
-            try {
-                clip = AudioSystem.getClip();
-                clip.open(AudioSystem.getAudioInputStream(soundFile));
-                clip.start();
-            } catch (LineUnavailableException | IOException | UnsupportedAudioFileException e) {
-                //e.printStackTrace();
-            }
-        }).start();
-    }
 }

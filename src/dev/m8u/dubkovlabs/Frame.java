@@ -1,6 +1,15 @@
 package dev.m8u.dubkovlabs;
 
+import dev.m8u.dubkovlabsserver.ChildBird;
+import dev.m8u.dubkovlabsserver.MamaBird;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
@@ -10,6 +19,7 @@ import java.awt.event.ActionListener;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -17,25 +27,33 @@ import java.util.Iterator;
 import java.util.Random;
 
 public class Frame extends JFrame implements ActionListener {
+    int port = 4502;
+
+    InetAddress address;
+    DatagramSocket socket;
+
     JPanel canvas;
-    JLabel timerLabel;
+    JSpinner mamaSpinner;
+    JSlider mamaSlider;
+    JSpinner childSpinner;
+    JSlider childSlider;
+    JSpinner lifespanSpinner;
+    JButton pauseButton;
     JLabel mamaBirdCountLabel;
     JLabel childBirdCountLabel;
-    JButton pauseButton;
+    JLabel timerLabel;
+
+
 
     int N1 = 3, N2 = 1, birdsLifespan = 30;
     float K = 0.5f, P = 0.5f;
 
     Random random;
-    float currentRandomFloat;
 
     Timer timer;
-    long frameCount = 1;
     long currentSec;
 
-    ArrayList<MamaBird> mamaBirds;
-    ArrayList<ChildBird> childBirds;
-    ArrayList<MamaBird> deadBirds;
+    ArrayList<ClientBird> birds;
 
     BufferedImage mamaBirdImage;
     BufferedImage eggImage;
@@ -50,9 +68,6 @@ public class Frame extends JFrame implements ActionListener {
     Instant startTime;
     Instant pauseTime;
 
-    long mamaLastSec = -1, childLastSec = -1;
-    long randomFloatLastSec = -1;
-
     @Override
     protected void frameInit() {
         super.frameInit();
@@ -60,11 +75,15 @@ public class Frame extends JFrame implements ActionListener {
     }
 
     public void init() {
+        String hostname = "217.71.129.139";
+        try {
+            address = InetAddress.getByName(hostname);
+            socket = new DatagramSocket();
+        } catch (UnknownHostException | SocketException e) {
+            e.printStackTrace();
+        }
         startTime = Instant.now();
         random = new Random();
-        mamaBirds = new ArrayList<>();
-        childBirds = new ArrayList<>();
-        deadBirds = new ArrayList<>();
 
         try {
             mamaBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/mama_bird.png" ));
@@ -89,6 +108,8 @@ public class Frame extends JFrame implements ActionListener {
             e.printStackTrace();
         }
 
+        birds = new ArrayList<>();
+
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setResizeWeight(1.0);
 
@@ -107,31 +128,26 @@ public class Frame extends JFrame implements ActionListener {
                     for (int x = 0; x < canvas.getWidth(); x+=hayBackgroundImage.getWidth())
                         g2d.drawImage(hayBackgroundImage, x, y, null);
 
-                for (MamaBird bird : mamaBirds) {
+                for (ClientBird bird : birds) {
                     AffineTransform old = g2d.getTransform();
                     g2d.rotate(Math.toRadians(bird.angle),
-                            bird.x-bird.getImageWidth()/2.0f, bird.y+bird.getImageWidth()/2.0f);
-                    bird.draw(g2d, mamaBirdImage);
-                    g2d.setTransform(old);
-                }
-
-                for (ChildBird bird : childBirds) {
-                    AffineTransform old = g2d.getTransform();
-                    g2d.rotate(Math.toRadians(bird.angle),
-                            bird.x-bird.getImageWidth()/2.0f, bird.y+bird.getImageWidth()/2.0f);
+                            bird.x-bird.imageWidth/2.0f, bird.y+bird.imageWidth/2.0f);
                     if (bird.secondsAlive < birdsLifespan / 10.0f)
-                        bird.draw(g2d, eggImage);
+                        g2d.drawImage(eggImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
                     else if (bird.secondsAlive < birdsLifespan / 6.0f)
-                        bird.draw(g2d, childBirdEggImage);
-                    else
-                        bird.draw(g2d, childBirdImage);
+                        g2d.drawImage(childBirdEggImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
+                    else if (bird.secondsAlive < birdsLifespan / 3.0f) {
+                        g2d.drawImage(childBirdImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
+                        if (bird.shouldCluck)
+                            playSound(childBirdSoundFiles[random.nextInt(childBirdSoundFiles.length)]);
+                    } else if (bird.secondsAlive <= birdsLifespan) {
+                        g2d.drawImage(mamaBirdImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
+                        if (bird.shouldCluck)
+                            playSound(mamaBirdSoundFiles[random.nextInt(mamaBirdSoundFiles.length)]);
+                    } else
+                        g2d.drawImage(birdSoulImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
                     g2d.setTransform(old);
                 }
-
-                for (MamaBird bird : deadBirds) {
-                    bird.draw(g2d, birdSoulImage);
-                }
-
             }
         };
 
@@ -150,7 +166,7 @@ public class Frame extends JFrame implements ActionListener {
         paramsPanel.setLayout(paramsGridLayout);
 
         JPanel mamaSpinnerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JSpinner mamaSpinner = new JSpinner();
+        mamaSpinner = new JSpinner();
         mamaSpinner.setModel(new SpinnerNumberModel(3, 1, 10, 1));
         mamaSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
         mamaSpinner.addChangeListener(e -> {
@@ -161,7 +177,7 @@ public class Frame extends JFrame implements ActionListener {
         mamaSpinnerPanel.add(mamaSpinner);
 
         JPanel mamaSliderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JSlider mamaSlider = new JSlider();
+        mamaSlider = new JSlider();
         mamaSlider.setModel(new DefaultBoundedRangeModel(50, 1, 0, 100+1));
         JLabel mamaSliderValueLabel = new JLabel(mamaSlider.getValue() + "%");
         mamaSliderValueLabel.setPreferredSize(new Dimension(mamaSliderValueLabel.getFontMetrics(mamaSliderValueLabel.getFont()).stringWidth("100%"), mamaSliderValueLabel.getPreferredSize().height));
@@ -175,7 +191,7 @@ public class Frame extends JFrame implements ActionListener {
         mamaSliderPanel.add(mamaSliderValueLabel);
 
         JPanel childSpinnerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JSpinner childSpinner = new JSpinner();
+        childSpinner = new JSpinner();
         childSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
         childSpinner.setModel(new SpinnerNumberModel(1, 1, 10, 1));
         childSpinner.addChangeListener(e -> {
@@ -186,7 +202,7 @@ public class Frame extends JFrame implements ActionListener {
         childSpinnerPanel.add(childSpinner);
 
         JPanel childSliderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JSlider childSlider = new JSlider();
+        childSlider = new JSlider();
         childSlider.setModel(new DefaultBoundedRangeModel(50, 1, 0, 100+1));
         JLabel childSliderValueLabel = new JLabel(childSlider.getValue() + "%");
         childSliderValueLabel.setPreferredSize(new Dimension(childSliderValueLabel.getFontMetrics(childSliderValueLabel.getFont()).stringWidth("100%"), childSliderValueLabel.getPreferredSize().height));
@@ -200,7 +216,7 @@ public class Frame extends JFrame implements ActionListener {
         childSliderPanel.add(childSliderValueLabel);
 
         JPanel lifespanSpinnerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JSpinner lifespanSpinner = new JSpinner();
+        lifespanSpinner = new JSpinner();
         lifespanSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
         lifespanSpinner.setModel(new SpinnerNumberModel(30, 1, 60, 1));
         lifespanSpinner.addChangeListener(e -> {
@@ -228,83 +244,83 @@ public class Frame extends JFrame implements ActionListener {
         });
         actionsPanel.add(pauseButton);
 
-        JButton saveButton = new JButton("Save...");
-        saveButton.addActionListener((e) -> {
-            pauseToggle(true);
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setSelectedFile(new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()+"/save.sav"));
-            int result = fileChooser.showSaveDialog(this);
-            if (result == JFileChooser.CANCEL_OPTION || result == JFileChooser.ABORT) {
-                pauseToggle(true);
-                return;
-            }
-            try {
-                ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileChooser.getSelectedFile()));
-                out.writeObject(N1);
-                out.writeObject(P);
-                out.writeObject(N2);
-                out.writeObject(K);
-                out.writeObject(birdsLifespan);
-                out.writeObject(currentSec);
-                for (MamaBird bird : mamaBirds) {
-                    out.writeObject(bird);
-                }
-                for (ChildBird bird : childBirds) {
-                    out.writeObject(bird);
-                }
-                out.close();
-            } catch (IOException exception) {
-                exception.printStackTrace();
-            }
-            pauseToggle(true);
-        });
-        actionsPanel.add(saveButton);
+//        JButton saveButton = new JButton("Save...");
+//        saveButton.addActionListener((e) -> {
+//            pauseToggle(true);
+//            JFileChooser fileChooser = new JFileChooser();
+//            fileChooser.setSelectedFile(new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()+"/save.sav"));
+//            int result = fileChooser.showSaveDialog(this);
+//            if (result == JFileChooser.CANCEL_OPTION || result == JFileChooser.ABORT) {
+//                pauseToggle(true);
+//                return;
+//            }
+//            try {
+//                ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileChooser.getSelectedFile()));
+//                out.writeObject(N1);
+//                out.writeObject(P);
+//                out.writeObject(N2);
+//                out.writeObject(K);
+//                out.writeObject(birdsLifespan);
+//                out.writeObject(currentSec);
+//                for (MamaBird bird : mamaBirds) {
+//                    out.writeObject(bird);
+//                }
+//                for (ChildBird bird : childBirds) {
+//                    out.writeObject(bird);
+//                }
+//                out.close();
+//            } catch (IOException exception) {
+//                exception.printStackTrace();
+//            }
+//            pauseToggle(true);
+//        });
+//        actionsPanel.add(saveButton);
+//
+//        JButton loadButton = new JButton("Load...");
+//        loadButton.addActionListener((e) -> {
+//            pauseToggle(true);
+//            JFileChooser fileChooser = new JFileChooser();
+//            fileChooser.setSelectedFile(new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()+"/save.sav"));
+//            int result = fileChooser.showOpenDialog(this);
+//            if (result == JFileChooser.CANCEL_OPTION || result == JFileChooser.ABORT) {
+//                pauseToggle(true);
+//                return;
+//            }
+//            ObjectInputStream in = null;
+//            try {
+//                in = new ObjectInputStream(new FileInputStream(fileChooser.getSelectedFile()));
+//                N1 = (int) in.readObject();
+//                mamaSpinner.setValue(N1);
+//                P = (float) in.readObject();
+//                mamaSlider.setValue((int) (P * 100));
+//                N2 = (int) in.readObject();
+//                childSpinner.setValue(N2);
+//                K = (float) in.readObject();
+//                childSlider.setValue((int) (K * 100));
+//                birdsLifespan = (int) in.readObject();
+//                lifespanSpinner.setValue(birdsLifespan);
+//                startTime = Instant.now().minusSeconds((Long) in.readObject());
+//                Object object;
+//                while (true) {
+//                    object = in.readObject();
+//                    if (object.getClass().equals(MamaBird.class)) {
+//                        mamaBirds.add((MamaBird) object);
+//                    } else {
+//                        childBirds.add((ChildBird) object);
+//                    }
+//                }
+//            } catch (IOException | ClassNotFoundException exception) {
+//                try {
+//                    in.close();
+//                } catch (IOException closeException) {
+//                    closeException.printStackTrace();
+//                }
+//            }
+//            pauseToggle(false);
+//        });
+//        actionsPanel.add(loadButton);
 
-        JButton loadButton = new JButton("Load...");
-        loadButton.addActionListener((e) -> {
-            pauseToggle(true);
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setSelectedFile(new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()+"/save.sav"));
-            int result = fileChooser.showOpenDialog(this);
-            if (result == JFileChooser.CANCEL_OPTION || result == JFileChooser.ABORT) {
-                pauseToggle(true);
-                return;
-            }
-            ObjectInputStream in = null;
-            try {
-                in = new ObjectInputStream(new FileInputStream(fileChooser.getSelectedFile()));
-                N1 = (int) in.readObject();
-                mamaSpinner.setValue(N1);
-                P = (float) in.readObject();
-                mamaSlider.setValue((int) (P * 100));
-                N2 = (int) in.readObject();
-                childSpinner.setValue(N2);
-                K = (float) in.readObject();
-                childSlider.setValue((int) (K * 100));
-                birdsLifespan = (int) in.readObject();
-                lifespanSpinner.setValue(birdsLifespan);
-                startTime = Instant.now().minusSeconds((Long) in.readObject());
-                Object object;
-                mamaBirds = new ArrayList<>();
-                childBirds = new ArrayList<>();
-                while (true) {
-                    object = in.readObject();
-                    if (object.getClass().equals(MamaBird.class)) {
-                        mamaBirds.add((MamaBird) object);
-                    } else {
-                        childBirds.add((ChildBird) object);
-                    }
-                }
-            } catch (IOException | ClassNotFoundException exception) {
-                try {
-                    in.close();
-                } catch (IOException closeException) {
-                    closeException.printStackTrace();
-                }
-            }
-            pauseToggle(false);
-        });
-        actionsPanel.add(loadButton);
+
 
         JPanel statsPanel = new JPanel();
         statsPanel.setBorder(new TitledBorder("Stats"));
@@ -312,8 +328,8 @@ public class Frame extends JFrame implements ActionListener {
         statsGridLayout.setVgap(5);
         statsPanel.setLayout(statsGridLayout);
 
-        mamaBirdCountLabel = new JLabel("Chicken count: " + mamaBirds.size());
-        childBirdCountLabel = new JLabel("Baby chick count: " + childBirds.size());
+        mamaBirdCountLabel = new JLabel();
+        childBirdCountLabel = new JLabel();
         timerLabel = new JLabel();
         mamaBirdCountLabel.setBorder(new EmptyBorder(4, 4, 4, 4));
         childBirdCountLabel.setBorder(new EmptyBorder(4, 4, 4, 4));
@@ -375,85 +391,93 @@ public class Frame extends JFrame implements ActionListener {
         if (canvas.getWidth() == 0)
             canvas.setSize(512, 512);
 
-        currentSec = Duration.between(startTime, Instant.now()).getSeconds();
+        applyJSONData(requestJSONData());
 
-        if (currentSec != randomFloatLastSec ) {
-            currentRandomFloat = random.nextFloat();
-            randomFloatLastSec = currentSec;
-        }
-        if (currentSec != mamaLastSec) {
-            for (MamaBird bird : mamaBirds) {
-                bird.secondsAlive++;
-            }
-            if (currentSec % N1 == 0 && currentRandomFloat <= P) {
-                mamaBirds.add(new MamaBird(170 + random.nextInt(canvas.getWidth() - 170*2),
-                        170 + random.nextInt(canvas.getHeight() - 170*2),
-                        1 + random.nextInt(2),
-                        1 + random.nextInt(2),
-                        0,
-                        1 + random.nextInt(3)));
-                mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.size());
-            }
-            mamaLastSec = currentSec;
-        }
-        if (currentSec != childLastSec) {
-            for (ChildBird bird : childBirds) {
-                bird.secondsAlive++;
-            }
-            if (currentSec % N2 == 0 && (float) childBirds.size() / mamaBirds.size() < K) {
-                childBirds.add(new ChildBird((canvas.getWidth()/2 + (random.nextInt(50) - 25)),
-                        (canvas.getHeight()/2 + (random.nextInt(50) - 25)),
-                        2 + random.nextInt(5),
-                        2 + random.nextInt(5),
-                        0,
-                        6 + random.nextInt(10)));
-                childLastSec = currentSec;
-                childBirdCountLabel.setText("Baby chick count: " + childBirds.size());
-            }
-            childLastSec = currentSec;
-        }
         timerLabel.setText(String.format("Time elapsed: %02d:%02d", currentSec/60, currentSec%60));
 
-        for (Iterator<MamaBird> iterator = mamaBirds.iterator(); iterator.hasNext();) {
-            MamaBird bird = iterator.next();
-            if (bird.secondsAlive > birdsLifespan) {
-                iterator.remove();
-                deadBirds.add(new MamaBird(bird.x, bird.y, 0, -4, 0, 0));
-                mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.size());
-            }
-            bird.animationStep();
-            if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 50) {
-                bird.cluck(mamaBirdSoundFiles[random.nextInt(mamaBirdSoundFiles.length)]);
-            }
-        }
-        for (Iterator<ChildBird> iterator = childBirds.iterator(); iterator.hasNext();) {
-            ChildBird bird = iterator.next();
-            if (bird.secondsAlive >= birdsLifespan / 3.0f) {
-                iterator.remove();
-                childBirdCountLabel.setText("Baby chick count: " + childBirds.size());
-                mamaBirds.add(new MamaBird(bird.x, bird.y,
-                        (bird.xVel > 0 ? 1 + random.nextInt(2) : (1 + random.nextInt(2)) * -1),
-                        (bird.yVel > 0 ? 1 + random.nextInt(2) : 1 + (random.nextInt(2)) * -1),
-                        bird.angle,
-                        (bird.angleVel > 0 ? 1 + random.nextInt(3) : (1 + random.nextInt(3)) * -1)));
-                mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.size());
-            }
-            if (bird.secondsAlive >= birdsLifespan / 6.0f)
-                bird.animationStep();
-            if (bird.checkForBorders(canvas.getWidth(), canvas.getHeight()) && bird.collisionsInRow < 50) {
-                bird.cluck(childBirdSoundFiles[random.nextInt(childBirdSoundFiles.length)]);
-            }
-        }
-        for (Iterator<MamaBird> iterator = deadBirds.iterator(); iterator.hasNext();) {
-            MamaBird bird = iterator.next();
-            if (bird.y + bird.getImageWidth() < 0) {
-                iterator.remove();
-            }
-            bird.animationStep();
-        }
-
         canvas.repaint();
-
-        frameCount++;
     }
+
+    JSONObject requestJSONData() {
+        try {
+            DatagramPacket request = new DatagramPacket(new byte[1], 1, address, port);
+            socket.send(request);
+
+            byte[] buffer = new byte[20000];
+            DatagramPacket response = new DatagramPacket(buffer, buffer.length);
+
+            socket.receive(response);
+            String responseData = new String(buffer, 0, response.getLength());
+            return new JSONObject(responseData);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    //{"currentSec": value, "N1": value, "N2": value, "K": value, "P": value, "birdsLifespan": value, "mamaBirds": [{}, {}, ...], "childBirds": [{}, {}, ...], "deadBirds": [{}, {}, ...]}
+    void applyJSONData(JSONObject data) {
+        currentSec = data.getLong("currentSec");
+        N1 = data.getInt("N1");
+        mamaSpinner.setValue(N1);
+        N2 = data.getInt("N2");
+        childSpinner.setValue(N2);
+        P = (float) data.getDouble("P");
+        mamaSlider.setValue((int) (P * 100));
+        K = (float) data.getDouble("K");
+        childSlider.setValue((int) (K * 100));
+        birdsLifespan = data.getInt("birdsLifespan");
+        lifespanSpinner.setValue(birdsLifespan);
+        birds = new ArrayList<>();
+        JSONArray mamaBirds = data.getJSONArray("mamaBirds");
+        JSONArray childBirds = data.getJSONArray("childBirds");
+        JSONArray deadBirds = data.getJSONArray("deadBirds");
+
+        for (int i = 0; i < mamaBirds.length(); i++) {
+            JSONObject jsonBird = mamaBirds.getJSONObject(i);
+            birds.add(new ClientBird(true,
+                    jsonBird.getInt("x"),
+                    jsonBird.getInt("y"),
+                    jsonBird.getInt("angle"),
+                    jsonBird.getInt("secondsAlive"),
+                    jsonBird.getBoolean("isStuck"),
+                    jsonBird.getBoolean("shouldCluck")));
+        }
+        for (int i = 0; i < childBirds.length(); i++) {
+            JSONObject jsonBird = childBirds.getJSONObject(i);
+            birds.add(new ClientBird(false,
+                    jsonBird.getInt("x"),
+                    jsonBird.getInt("y"),
+                    jsonBird.getInt("angle"),
+                    jsonBird.getInt("secondsAlive"),
+                    jsonBird.getBoolean("isStuck"),
+                    jsonBird.getBoolean("shouldCluck")));
+        }
+        for (int i = 0; i < deadBirds.length(); i++) {
+            JSONObject jsonBird = deadBirds.getJSONObject(i);
+            birds.add(new ClientBird(true,
+                    jsonBird.getInt("x"),
+                    jsonBird.getInt("y"),
+                    jsonBird.getInt("angle"),
+                    jsonBird.getInt("secondsAlive"),
+                    jsonBird.getBoolean("isStuck"),
+                    jsonBird.getBoolean("shouldCluck")));
+        }
+
+        mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.length());
+        childBirdCountLabel.setText("Baby chick count: " + childBirds.length());
+    }
+
+    public void playSound(File soundFile) {
+        new Thread(() -> {
+            Clip clip;
+            try {
+                clip = AudioSystem.getClip();
+                clip.open(AudioSystem.getAudioInputStream(soundFile));
+                clip.start();
+            } catch (LineUnavailableException | IOException | UnsupportedAudioFileException e) {
+                //e.printStackTrace();
+            }
+        }).start();
+    }
+
 }

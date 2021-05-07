@@ -1,10 +1,5 @@
 package dev.m8u.dubkovlabsserver;
 
-import javax.sound.sampled.*;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
 
 public class Bird implements Serializable {
@@ -13,10 +8,11 @@ public class Bird implements Serializable {
         xVel, yVel,
         angle, angleVel,
         collisionsInRow,
+        lifespan,
         secondsAlive;
     boolean isStuck, shouldCluck;
 
-    public Bird(int x, int y, int xVel, int yVel, int angle, int angleVel) {
+    public Bird(int x, int y, int xVel, int yVel, int angle, int angleVel, int lifespan) {
         this.x = x;
         this.y = y;
         this.xVel = xVel;
@@ -26,6 +22,7 @@ public class Bird implements Serializable {
         this.collisionsInRow = 0;
         this.isStuck = false;
         this.shouldCluck = false;
+        this.lifespan = lifespan;
         this.secondsAlive = 0;
     }
 
@@ -54,8 +51,6 @@ public class Bird implements Serializable {
         } else if (this.isStuck && this.collisionsInRow > 0) {
             xVel = (int) (((width/2.0f - this.x) * 2) / (width / 2));
             yVel = (int) (((height/2.0f - this.y) * 2) / (height / 2));
-            System.out.println(width/2.0f + " " + this.x);
-            System.out.println(xVel + " " + yVel);
             this.collisionsInRow = 0;
         }
 

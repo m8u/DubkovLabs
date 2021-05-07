@@ -1,7 +1,5 @@
 package dev.m8u.dubkovlabs;
 
-import dev.m8u.dubkovlabsserver.ChildBird;
-import dev.m8u.dubkovlabsserver.MamaBird;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -20,14 +18,15 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.*;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Random;
 
 public class Frame extends JFrame implements ActionListener {
+    String hostname = "217.71.129.139";
     int port = 4502;
+    //String hostname = "localhost";
+    //int port = 3369;
 
     InetAddress address;
     DatagramSocket socket;
@@ -43,8 +42,6 @@ public class Frame extends JFrame implements ActionListener {
     JLabel childBirdCountLabel;
     JLabel timerLabel;
 
-
-
     int N1 = 3, N2 = 1, birdsLifespan = 30;
     float K = 0.5f, P = 0.5f;
 
@@ -52,6 +49,8 @@ public class Frame extends JFrame implements ActionListener {
 
     Timer timer;
     long currentSec;
+
+    boolean isPaused = false;
 
     ArrayList<ClientBird> birds;
 
@@ -66,7 +65,6 @@ public class Frame extends JFrame implements ActionListener {
     File[] childBirdSoundFiles;
 
     Instant startTime;
-    Instant pauseTime;
 
     @Override
     protected void frameInit() {
@@ -75,7 +73,6 @@ public class Frame extends JFrame implements ActionListener {
     }
 
     public void init() {
-        String hostname = "217.71.129.139";
         try {
             address = InetAddress.getByName(hostname);
             socket = new DatagramSocket();
@@ -132,15 +129,15 @@ public class Frame extends JFrame implements ActionListener {
                     AffineTransform old = g2d.getTransform();
                     g2d.rotate(Math.toRadians(bird.angle),
                             bird.x-bird.imageWidth/2.0f, bird.y+bird.imageWidth/2.0f);
-                    if (bird.secondsAlive < birdsLifespan / 10.0f)
+                    if (bird.secondsAlive < (int) (bird.lifespan / 10.0f))
                         g2d.drawImage(eggImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
-                    else if (bird.secondsAlive < birdsLifespan / 6.0f)
+                    else if (bird.secondsAlive < (int) (bird.lifespan / 6.0f))
                         g2d.drawImage(childBirdEggImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
-                    else if (bird.secondsAlive < birdsLifespan / 3.0f) {
+                    else if (bird.secondsAlive < (int) (bird.lifespan / 3.0f) || bird.imageWidth == 40) {
                         g2d.drawImage(childBirdImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
                         if (bird.shouldCluck)
                             playSound(childBirdSoundFiles[random.nextInt(childBirdSoundFiles.length)]);
-                    } else if (bird.secondsAlive <= birdsLifespan) {
+                    } else if (bird.secondsAlive <= bird.lifespan) {
                         g2d.drawImage(mamaBirdImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
                         if (bird.shouldCluck)
                             playSound(mamaBirdSoundFiles[random.nextInt(mamaBirdSoundFiles.length)]);
@@ -170,7 +167,12 @@ public class Frame extends JFrame implements ActionListener {
         mamaSpinner.setModel(new SpinnerNumberModel(3, 1, 10, 1));
         mamaSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
         mamaSpinner.addChangeListener(e -> {
+            if (isPaused) {
+                mamaSpinner.setValue(N1);
+                return;
+            }
             N1 = (int) mamaSpinner.getValue();
+            submitParamValue("N1", N1);
         });
         mamaSpinner.setToolTipText("Chicken spawn interval (s)");
         mamaSpinnerPanel.add(new JLabel("N1:"));
@@ -182,8 +184,13 @@ public class Frame extends JFrame implements ActionListener {
         JLabel mamaSliderValueLabel = new JLabel(mamaSlider.getValue() + "%");
         mamaSliderValueLabel.setPreferredSize(new Dimension(mamaSliderValueLabel.getFontMetrics(mamaSliderValueLabel.getFont()).stringWidth("100%"), mamaSliderValueLabel.getPreferredSize().height));
         mamaSlider.addChangeListener(e -> {
+            if (isPaused) {
+                mamaSlider.setValue((int) (P*100));
+                return;
+            }
             P = mamaSlider.getValue() / 100.0f;
             mamaSliderValueLabel.setText(mamaSlider.getValue() + "%");
+            submitParamValue("P", (int) (P*100));
         });
         mamaSlider.setToolTipText("Chicken spawn probability (%)");
         mamaSliderPanel.add(new JLabel("P:"));
@@ -195,7 +202,12 @@ public class Frame extends JFrame implements ActionListener {
         childSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
         childSpinner.setModel(new SpinnerNumberModel(1, 1, 10, 1));
         childSpinner.addChangeListener(e -> {
+            if (isPaused) {
+                childSpinner.setValue(N2);
+                return;
+            }
             N2 = (int) childSpinner.getValue();
+            submitParamValue("N2", N2);
         });
         childSpinner.setToolTipText("Baby chick spawn interval (s)");
         childSpinnerPanel.add(new JLabel("N2:"));
@@ -207,8 +219,13 @@ public class Frame extends JFrame implements ActionListener {
         JLabel childSliderValueLabel = new JLabel(childSlider.getValue() + "%");
         childSliderValueLabel.setPreferredSize(new Dimension(childSliderValueLabel.getFontMetrics(childSliderValueLabel.getFont()).stringWidth("100%"), childSliderValueLabel.getPreferredSize().height));
         childSlider.addChangeListener(e -> {
+            if (isPaused) {
+                childSlider.setValue((int) (K*100));
+                return;
+            }
             K = childSlider.getValue() / 100.0f;
             childSliderValueLabel.setText(childSlider.getValue() + "%");
+            submitParamValue("K", (int) (K*100));
         });
         childSlider.setToolTipText("Baby chicks ratio (%)");
         childSliderPanel.add(new JLabel("K:"));
@@ -220,7 +237,12 @@ public class Frame extends JFrame implements ActionListener {
         lifespanSpinner.setAlignmentX(Component.LEFT_ALIGNMENT);
         lifespanSpinner.setModel(new SpinnerNumberModel(30, 1, 60, 1));
         lifespanSpinner.addChangeListener(e -> {
+            if (isPaused) {
+                lifespanSpinner.setValue(birdsLifespan);
+                return;
+            }
             birdsLifespan = (int) lifespanSpinner.getValue();
+            submitParamValue("birdsLifespan", birdsLifespan);
         });
         lifespanSpinner.setToolTipText("Birds lifespan (s)");
         lifespanSpinnerPanel.add(new JLabel("Lifespan:"));
@@ -238,89 +260,25 @@ public class Frame extends JFrame implements ActionListener {
         actionGridLayout.setVgap(5);
         actionsPanel.setLayout(actionGridLayout);
 
-        pauseButton = new JButton("Pause simulation");
+        pauseButton = new JButton("Submit pause");
         pauseButton.addActionListener((e) -> {
-            pauseToggle(true);
+            submitAction("togglePause");
+            isPaused = !isPaused;
+            pauseButton.setText(isPaused ? "Submit resume" : "Submit pause");
         });
         actionsPanel.add(pauseButton);
 
-//        JButton saveButton = new JButton("Save...");
-//        saveButton.addActionListener((e) -> {
-//            pauseToggle(true);
-//            JFileChooser fileChooser = new JFileChooser();
-//            fileChooser.setSelectedFile(new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()+"/save.sav"));
-//            int result = fileChooser.showSaveDialog(this);
-//            if (result == JFileChooser.CANCEL_OPTION || result == JFileChooser.ABORT) {
-//                pauseToggle(true);
-//                return;
-//            }
-//            try {
-//                ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileChooser.getSelectedFile()));
-//                out.writeObject(N1);
-//                out.writeObject(P);
-//                out.writeObject(N2);
-//                out.writeObject(K);
-//                out.writeObject(birdsLifespan);
-//                out.writeObject(currentSec);
-//                for (MamaBird bird : mamaBirds) {
-//                    out.writeObject(bird);
-//                }
-//                for (ChildBird bird : childBirds) {
-//                    out.writeObject(bird);
-//                }
-//                out.close();
-//            } catch (IOException exception) {
-//                exception.printStackTrace();
-//            }
-//            pauseToggle(true);
-//        });
-//        actionsPanel.add(saveButton);
-//
-//        JButton loadButton = new JButton("Load...");
-//        loadButton.addActionListener((e) -> {
-//            pauseToggle(true);
-//            JFileChooser fileChooser = new JFileChooser();
-//            fileChooser.setSelectedFile(new File(Main.class.getProtectionDomain().getCodeSource().getLocation().getPath()+"/save.sav"));
-//            int result = fileChooser.showOpenDialog(this);
-//            if (result == JFileChooser.CANCEL_OPTION || result == JFileChooser.ABORT) {
-//                pauseToggle(true);
-//                return;
-//            }
-//            ObjectInputStream in = null;
-//            try {
-//                in = new ObjectInputStream(new FileInputStream(fileChooser.getSelectedFile()));
-//                N1 = (int) in.readObject();
-//                mamaSpinner.setValue(N1);
-//                P = (float) in.readObject();
-//                mamaSlider.setValue((int) (P * 100));
-//                N2 = (int) in.readObject();
-//                childSpinner.setValue(N2);
-//                K = (float) in.readObject();
-//                childSlider.setValue((int) (K * 100));
-//                birdsLifespan = (int) in.readObject();
-//                lifespanSpinner.setValue(birdsLifespan);
-//                startTime = Instant.now().minusSeconds((Long) in.readObject());
-//                Object object;
-//                while (true) {
-//                    object = in.readObject();
-//                    if (object.getClass().equals(MamaBird.class)) {
-//                        mamaBirds.add((MamaBird) object);
-//                    } else {
-//                        childBirds.add((ChildBird) object);
-//                    }
-//                }
-//            } catch (IOException | ClassNotFoundException exception) {
-//                try {
-//                    in.close();
-//                } catch (IOException closeException) {
-//                    closeException.printStackTrace();
-//                }
-//            }
-//            pauseToggle(false);
-//        });
-//        actionsPanel.add(loadButton);
+        JButton saveButton = new JButton("Submit save");
+        saveButton.addActionListener((e) -> {
+            submitAction("save");
+        });
+        actionsPanel.add(saveButton);
 
-
+        JButton loadButton = new JButton("Submit load");
+        loadButton.addActionListener((e) -> {
+            submitAction("load");
+        });
+        actionsPanel.add(loadButton);
 
         JPanel statsPanel = new JPanel();
         statsPanel.setBorder(new TitledBorder("Stats"));
@@ -373,49 +331,41 @@ public class Frame extends JFrame implements ActionListener {
         timer.start();
     }
 
-    public void pauseToggle(boolean handleStartTimeValue) {
-        if (timer.isRunning()) {
-            timer.stop();
-            if (handleStartTimeValue)
-                pauseTime = Instant.now();
-            pauseButton.setText("Resume simulation");
-        } else {
-            if (handleStartTimeValue)
-                startTime = startTime.plus(Duration.between(pauseTime, Instant.now()));
-            timer.start();
-            pauseButton.setText("Pause simulation");
-        }
-    }
-
     public void actionPerformed(ActionEvent event) {
         if (canvas.getWidth() == 0)
-            canvas.setSize(512, 512);
+            canvas.setSize(485, 559);
 
-        applyJSONData(requestJSONData());
+        new Thread(() -> {
+            JSONObject data = requestHenhouseData();
+            applyHenhouseJSONData(data);
+        }).start();
 
         timerLabel.setText(String.format("Time elapsed: %02d:%02d", currentSec/60, currentSec%60));
 
         canvas.repaint();
     }
 
-    JSONObject requestJSONData() {
+    JSONObject requestHenhouseData() {
         try {
-            DatagramPacket request = new DatagramPacket(new byte[1], 1, address, port);
+            JSONObject jsonData = new JSONObject();
+            jsonData.put("", "");
+            byte[] requestBuffer = jsonData.toString().getBytes();
+            DatagramPacket request = new DatagramPacket(requestBuffer, requestBuffer.length, address, port);
             socket.send(request);
 
-            byte[] buffer = new byte[20000];
-            DatagramPacket response = new DatagramPacket(buffer, buffer.length);
+            byte[] responseBuffer = new byte[2000];
+            DatagramPacket response = new DatagramPacket(responseBuffer, responseBuffer.length);
 
             socket.receive(response);
-            String responseData = new String(buffer, 0, response.getLength());
+            String responseData = new String(responseBuffer, 0, response.getLength());
             return new JSONObject(responseData);
         } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
     }
-    //{"currentSec": value, "N1": value, "N2": value, "K": value, "P": value, "birdsLifespan": value, "mamaBirds": [{}, {}, ...], "childBirds": [{}, {}, ...], "deadBirds": [{}, {}, ...]}
-    void applyJSONData(JSONObject data) {
+
+    void applyHenhouseJSONData(JSONObject data) {
         currentSec = data.getLong("currentSec");
         N1 = data.getInt("N1");
         mamaSpinner.setValue(N1);
@@ -427,6 +377,7 @@ public class Frame extends JFrame implements ActionListener {
         childSlider.setValue((int) (K * 100));
         birdsLifespan = data.getInt("birdsLifespan");
         lifespanSpinner.setValue(birdsLifespan);
+        isPaused = data.getBoolean("isPaused");
         birds = new ArrayList<>();
         JSONArray mamaBirds = data.getJSONArray("mamaBirds");
         JSONArray childBirds = data.getJSONArray("childBirds");
@@ -434,30 +385,33 @@ public class Frame extends JFrame implements ActionListener {
 
         for (int i = 0; i < mamaBirds.length(); i++) {
             JSONObject jsonBird = mamaBirds.getJSONObject(i);
-            birds.add(new ClientBird(true,
+            birds.add(new ClientBird((jsonBird.getInt("secondsAlive") >= jsonBird.getInt("lifespan") / 3.0f),
                     jsonBird.getInt("x"),
                     jsonBird.getInt("y"),
                     jsonBird.getInt("angle"),
+                    jsonBird.getInt("lifespan"),
                     jsonBird.getInt("secondsAlive"),
                     jsonBird.getBoolean("isStuck"),
                     jsonBird.getBoolean("shouldCluck")));
         }
         for (int i = 0; i < childBirds.length(); i++) {
             JSONObject jsonBird = childBirds.getJSONObject(i);
-            birds.add(new ClientBird(false,
+            birds.add(new ClientBird((jsonBird.getInt("secondsAlive") >= jsonBird.getInt("lifespan") / 3.0f),
                     jsonBird.getInt("x"),
                     jsonBird.getInt("y"),
                     jsonBird.getInt("angle"),
+                    jsonBird.getInt("lifespan"),
                     jsonBird.getInt("secondsAlive"),
                     jsonBird.getBoolean("isStuck"),
                     jsonBird.getBoolean("shouldCluck")));
         }
         for (int i = 0; i < deadBirds.length(); i++) {
             JSONObject jsonBird = deadBirds.getJSONObject(i);
-            birds.add(new ClientBird(true,
+            birds.add(new ClientBird((jsonBird.getInt("secondsAlive") >= jsonBird.getInt("lifespan") / 3.0f),
                     jsonBird.getInt("x"),
                     jsonBird.getInt("y"),
                     jsonBird.getInt("angle"),
+                    jsonBird.getInt("lifespan"),
                     jsonBird.getInt("secondsAlive"),
                     jsonBird.getBoolean("isStuck"),
                     jsonBird.getBoolean("shouldCluck")));
@@ -466,6 +420,34 @@ public class Frame extends JFrame implements ActionListener {
         mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.length());
         childBirdCountLabel.setText("Baby chick count: " + childBirds.length());
     }
+
+    void submitParamValue(String paramName, int value) {
+        try {
+            JSONObject jsonData = new JSONObject();
+            jsonData.put("parameter", paramName);
+            jsonData.put("value", value);
+            byte[] buffer = jsonData.toString().getBytes();
+
+            DatagramPacket request = new DatagramPacket(buffer, buffer.length, address, port);
+            socket.send(request);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    void submitAction(String actionName) {
+        try {
+            JSONObject jsonData = new JSONObject();
+            jsonData.put("action", actionName);
+            byte[] buffer = jsonData.toString().getBytes();
+
+            DatagramPacket request = new DatagramPacket(buffer, buffer.length, address, port);
+            socket.send(request);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     public void playSound(File soundFile) {
         new Thread(() -> {

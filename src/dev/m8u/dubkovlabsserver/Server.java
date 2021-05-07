@@ -1,7 +1,5 @@
 package dev.m8u.dubkovlabsserver;
 
-
-
 import org.json.JSONObject;
 
 import java.io.*;
@@ -18,7 +16,7 @@ public class Server {
 
     public static void main(String[] args) {
 
-        int port = 3369;
+        int port = 3368;
 
         try {
             Server server = new Server(port);
@@ -38,18 +36,52 @@ public class Server {
 
     private void service() throws IOException {
         while (true) {
-            DatagramPacket request = new DatagramPacket(new byte[1], 1);
+            byte[] requestBuffer = new byte[128];
+            DatagramPacket request = new DatagramPacket(requestBuffer, requestBuffer.length);
             socket.receive(request);
 
-            String data = henhouse.getJSON().toString();
-            byte[] buffer = data.getBytes();
+            JSONObject requestData = new JSONObject(new String(requestBuffer, 0, request.getLength()));
+            
+            if (requestData.has("parameter")) {
+                switch (requestData.getString("parameter")) {
+                    case "N1":
+                        henhouse.N1 = requestData.getInt("value");
+                        break;
+                    case "N2":
+                        henhouse.N2 = requestData.getInt("value");
+                        break;
+                    case "K":
+                        henhouse.K = requestData.getInt("value") / 100.0f;
+                        break;
+                    case "P":
+                        henhouse.P = requestData.getInt("value") / 100.0f;
+                        break;
+                    case "birdsLifespan":
+                        henhouse.birdsLifespan = requestData.getInt("value");
+                        break;
+                }
+            } else if (requestData.has("action")) {
+                switch (requestData.getString("action")) {
+                    case "togglePause":
+                        henhouse.togglePause(true);
+                        break;
+                    case "save":
+                        henhouse.save();
+                        break;
+                    case "load":
+                        henhouse.load();
+                        break;
+                }
+            } else {
+                String data = henhouse.getJSON().toString();
+                byte[] responseBuffer = data.getBytes();
 
-            InetAddress clientAddress = request.getAddress();
-            int clientPort = request.getPort();
+                InetAddress clientAddress = request.getAddress();
+                int clientPort = request.getPort();
 
-            DatagramPacket response = new DatagramPacket(buffer, buffer.length, clientAddress, clientPort);
-            socket.send(response);
+                DatagramPacket response = new DatagramPacket(responseBuffer, responseBuffer.length, clientAddress, clientPort);
+                socket.send(response);
+            }
         }
     }
-
 }

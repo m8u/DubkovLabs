@@ -73,5 +73,4 @@ public class Bird implements Serializable {
     public int getImageWidth() {
         return imageWidth;
     }
-
 }

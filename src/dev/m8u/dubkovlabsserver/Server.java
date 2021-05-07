@@ -15,8 +15,7 @@ public class Server {
     }
 
     public static void main(String[] args) {
-
-        int port = 3368;
+        int port = 3369;
 
         try {
             Server server = new Server(port);
@@ -40,9 +39,11 @@ public class Server {
             DatagramPacket request = new DatagramPacket(requestBuffer, requestBuffer.length);
             socket.receive(request);
 
-            JSONObject requestData = new JSONObject(new String(requestBuffer, 0, request.getLength()));
+            String requestDataString = new String(requestBuffer, 0, request.getLength());
+            JSONObject requestData = new JSONObject(requestDataString);
             
             if (requestData.has("parameter")) {
+                System.out.println(requestDataString);
                 switch (requestData.getString("parameter")) {
                     case "N1":
                         henhouse.N1 = requestData.getInt("value");
@@ -61,6 +62,7 @@ public class Server {
                         break;
                 }
             } else if (requestData.has("action")) {
+                System.out.println(requestDataString);
                 switch (requestData.getString("action")) {
                     case "togglePause":
                         henhouse.togglePause(true);

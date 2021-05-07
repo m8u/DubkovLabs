@@ -186,6 +186,9 @@ public class Henhouse {
             K = (float) in.readObject();
             birdsLifespan = (int) in.readObject();
             startTime = Instant.now().minusSeconds((Long) in.readObject());
+            mamaBirds = new ArrayList<>();
+            childBirds = new ArrayList<>();
+            deadBirds = new ArrayList<>();
             Object object;
             while (true) {
                 object = in.readObject();

@@ -23,9 +23,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class Frame extends JFrame implements ActionListener {
-    String hostname = "217.71.129.139";
     int port = 4502;
-    //String hostname = "localhost";
     //int port = 3369;
 
     InetAddress address;
@@ -74,6 +72,8 @@ public class Frame extends JFrame implements ActionListener {
 
     public void init() {
         try {
+            String hostname = "217.71.129.139";
+            //String hostname = "localhost";
             address = InetAddress.getByName(hostname);
             socket = new DatagramSocket();
         } catch (UnknownHostException | SocketException e) {
@@ -107,9 +107,10 @@ public class Frame extends JFrame implements ActionListener {
 
         birds = new ArrayList<>();
 
+        this.setResizable(false);
+
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setResizeWeight(1.0);
-
 
         Box left = new Box(BoxLayout.Y_AXIS);
         canvas = new JPanel() {
@@ -448,7 +449,6 @@ public class Frame extends JFrame implements ActionListener {
         }
     }
 
-
     public void playSound(File soundFile) {
         new Thread(() -> {
             Clip clip;
@@ -461,5 +461,4 @@ public class Frame extends JFrame implements ActionListener {
             }
         }).start();
     }
-
 }

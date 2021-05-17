@@ -1,4 +1,4 @@
-package dev.m8u.dubkovlabs;
+package dev.m8u.dubkovlabsclient;
 
 public class ClientBird {
     int x, y, angle, lifespan, secondsAlive, imageWidth;

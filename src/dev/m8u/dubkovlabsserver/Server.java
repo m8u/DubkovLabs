@@ -68,10 +68,10 @@ public class Server {
                         henhouse.togglePause(true);
                         break;
                     case "save":
-                        henhouse.save();
+                        henhouse.saveToDatabase();
                         break;
                     case "load":
-                        henhouse.load();
+                        henhouse.loadFromDatabase();
                         break;
                 }
             } else {

@@ -3,8 +3,7 @@ package dev.m8u.dubkovlabsserver;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.*;
-import java.nio.file.Paths;
+import java.sql.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -155,55 +154,98 @@ public class Henhouse {
         }
     }
 
-    public void save() {
+    public void saveToDatabase() {
+        Connection conn;
+        Statement stmt;
         try {
-            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(Paths.get(".")+"/save.sav"));
-            out.writeObject(N1);
-            out.writeObject(P);
-            out.writeObject(N2);
-            out.writeObject(K);
-            out.writeObject(birdsLifespan);
-            out.writeObject(currentSec);
+            Class.forName("org.mariadb.jdbc.Driver");
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/dubkovlabs?" +
+                            "user=m8u&password=3369");
+            stmt = conn.createStatement();
+
+            stmt.executeQuery("DELETE FROM parameters WHERE true");
+            stmt.executeQuery(
+                String.format("INSERT INTO parameters (N1, P, N2, K, birdsLifespan, currentSec) " +
+                                "VALUES (%d, %f, %d, %f, %d, %d)",
+                    N1, P, N2, K, birdsLifespan, currentSec));
+            stmt.executeQuery("DELETE FROM birds WHERE true");
             for (MamaBird bird : mamaBirds) {
-                out.writeObject(bird);
+                stmt.executeQuery(
+                    String.format("INSERT INTO birds (isAdult, x, y, xVel, yVel, angle, angleVel, lifespan, secondsAlive) " +
+                                    "VALUES (1, %d, %d, %d, %d, %d, %d, %d, %d)",
+                        bird.x, bird.y, bird.xVel, bird.yVel, bird.angle, bird.angleVel, bird.lifespan, bird.secondsAlive));
             }
             for (ChildBird bird : childBirds) {
-                out.writeObject(bird);
+                stmt.executeQuery(
+                    String.format("INSERT INTO birds (isAdult, x, y, xVel, yVel, angle, angleVel, lifespan, secondsAlive) " +
+                                    "VALUES (0, %d, %d, %d, %d, %d, %d, %d, %d)",
+                        bird.x, bird.y, bird.xVel, bird.yVel, bird.angle, bird.angleVel, bird.lifespan, bird.secondsAlive));
             }
-            out.close();
-        } catch (IOException exception) {
-            exception.printStackTrace();
+
+        } catch (SQLException e) {
+            System.out.println("SQLException: " + e.getMessage());
+            System.out.println("SQLState: " + e.getSQLState());
+            System.out.println("VendorError: " + e.getErrorCode());
+        } catch (ClassNotFoundException e) {
+            System.out.println("Driver not found");
         }
     }
 
-    public void load() {
-        ObjectInputStream in = null;
+    public void loadFromDatabase() {
+        Connection conn;
+        Statement stmt;
+        ResultSet rs;
         try {
-            in = new ObjectInputStream(new FileInputStream(Paths.get(".")+"/save.sav"));
-            N1 = (int) in.readObject();
-            P = (float) in.readObject();
-            N2 = (int) in.readObject();
-            K = (float) in.readObject();
-            birdsLifespan = (int) in.readObject();
-            startTime = Instant.now().minusSeconds((Long) in.readObject());
+            Class.forName("org.mariadb.jdbc.Driver");
+            conn = DriverManager.getConnection("jdbc:mysql://localhost/dubkovlabs?" +
+                    "user=m8u&password=3369");
+            stmt = conn.createStatement();
+
+            rs = stmt.executeQuery("SELECT * FROM parameters");
+            rs.first();
+            N1 = rs.getInt("N1");
+            P = rs.getFloat("P");
+            N2 = rs.getInt("N2");
+            K = rs.getFloat("K");
+            birdsLifespan = rs.getInt("birdsLifespan");
+            currentSec = rs.getLong("currentSec");
+
+            rs = stmt.executeQuery("SELECT * FROM birds");
+            rs.first();
             mamaBirds = new ArrayList<>();
             childBirds = new ArrayList<>();
             deadBirds = new ArrayList<>();
-            Object object;
-            while (true) {
-                object = in.readObject();
-                if (object.getClass().equals(MamaBird.class)) {
-                    mamaBirds.add((MamaBird) object);
+            while (rs.next()) {
+                if (rs.getBoolean("isAdult")) {
+                    mamaBirds.add(new MamaBird(
+                            rs.getInt("x"),
+                            rs.getInt("y"),
+                            rs.getInt("xVel"),
+                            rs.getInt("yVel"),
+                            rs.getInt("angle"),
+                            rs.getInt("angleVel"),
+                            rs.getInt("lifespan"),
+                            rs.getInt("secondsAlive")
+                    ));
                 } else {
-                    childBirds.add((ChildBird) object);
+                    childBirds.add(new ChildBird(
+                            rs.getInt("x"),
+                            rs.getInt("y"),
+                            rs.getInt("xVel"),
+                            rs.getInt("yVel"),
+                            rs.getInt("angle"),
+                            rs.getInt("angleVel"),
+                            rs.getInt("lifespan"),
+                            rs.getInt("secondsAlive")
+                    ));
                 }
             }
-        } catch (ClassNotFoundException | IOException exception) {
-            try {
-                in.close();
-            } catch (IOException closeException) {
-                closeException.printStackTrace();
-            }
+        } catch (SQLException e) {
+            System.out.println("SQLException: " + e.getMessage());
+            System.out.println("SQLState: " + e.getSQLState());
+            System.out.println("VendorError: " + e.getErrorCode());
+        } catch (ClassNotFoundException e) {
+            System.out.println("Driver not found");
         }
     }
 

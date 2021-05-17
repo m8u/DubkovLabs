@@ -1,4 +1,4 @@
-package dev.m8u.dubkovlabs;
+package dev.m8u.dubkovlabsclient;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -23,8 +23,8 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class Frame extends JFrame implements ActionListener {
-    int port = 4502;
-    //int port = 3369;
+    //int port = 4502;
+    int port = 3369;
 
     InetAddress address;
     DatagramSocket socket;
@@ -72,8 +72,8 @@ public class Frame extends JFrame implements ActionListener {
 
     public void init() {
         try {
-            String hostname = "217.71.129.139";
-            //String hostname = "localhost";
+            //String hostname = "217.71.129.139";
+            String hostname = "localhost";
             address = InetAddress.getByName(hostname);
             socket = new DatagramSocket();
         } catch (UnknownHostException | SocketException e) {

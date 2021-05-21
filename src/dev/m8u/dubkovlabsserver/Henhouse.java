@@ -264,42 +264,42 @@ public class Henhouse {
         rootObject.put("isPaused", isPaused);
         JSONArray mamaBirdsArray = new JSONArray();
         for (MamaBird bird : mamaBirds) {
-            JSONObject jsonBird = new JSONObject();
-            jsonBird.put("x", bird.x);
-            jsonBird.put("y", bird.y);
-            jsonBird.put("angle", bird.angle);
-            jsonBird.put("lifespan", bird.lifespan);
-            jsonBird.put("secondsAlive", bird.secondsAlive);
-            jsonBird.put("isStuck", bird.isStuck);
-            jsonBird.put("shouldCluck", bird.shouldCluck);
+            JSONObject jsonMamaBird = new JSONObject();
+            jsonMamaBird.put("x", bird.x);
+            jsonMamaBird.put("y", bird.y);
+            jsonMamaBird.put("angle", bird.angle);
+            jsonMamaBird.put("lifespan", bird.lifespan);
+            jsonMamaBird.put("secondsAlive", bird.secondsAlive);
+            jsonMamaBird.put("isStuck", bird.isStuck);
+            jsonMamaBird.put("shouldCluck", bird.shouldCluck);
             bird.shouldCluck = false;
-            mamaBirdsArray.put(jsonBird);
+            mamaBirdsArray.put(jsonMamaBird);
         }
         JSONArray childBirdsArray = new JSONArray();
         for (ChildBird bird : childBirds) {
-            JSONObject jsonBird = new JSONObject();
-            jsonBird.put("x", bird.x);
-            jsonBird.put("y", bird.y);
-            jsonBird.put("angle", bird.angle);
-            jsonBird.put("lifespan", bird.lifespan);
-            jsonBird.put("secondsAlive", bird.secondsAlive);
-            jsonBird.put("isStuck", bird.isStuck);
-            jsonBird.put("shouldCluck", bird.shouldCluck);
+            JSONObject jsonChildBird = new JSONObject();
+            jsonChildBird.put("x", bird.x);
+            jsonChildBird.put("y", bird.y);
+            jsonChildBird.put("angle", bird.angle);
+            jsonChildBird.put("lifespan", bird.lifespan);
+            jsonChildBird.put("secondsAlive", bird.secondsAlive);
+            jsonChildBird.put("isStuck", bird.isStuck);
+            jsonChildBird.put("shouldCluck", bird.shouldCluck);
             bird.shouldCluck = false;
-            childBirdsArray.put(jsonBird);
+            childBirdsArray.put(jsonChildBird);
         }
         JSONArray deadBirdsArray = new JSONArray();
         for (MamaBird bird : deadBirds) {
-            JSONObject jsonBird = new JSONObject();
-            jsonBird.put("x", bird.x);
-            jsonBird.put("y", bird.y);
-            jsonBird.put("angle", bird.angle);
-            jsonBird.put("lifespan", bird.lifespan);
-            jsonBird.put("secondsAlive", bird.secondsAlive);
-            jsonBird.put("isStuck", bird.isStuck);
-            jsonBird.put("shouldCluck", bird.shouldCluck);
+            JSONObject jsonDeadBird = new JSONObject();
+            jsonDeadBird.put("x", bird.x);
+            jsonDeadBird.put("y", bird.y);
+            jsonDeadBird.put("angle", bird.angle);
+            jsonDeadBird.put("lifespan", bird.lifespan);
+            jsonDeadBird.put("secondsAlive", bird.secondsAlive);
+            jsonDeadBird.put("isStuck", bird.isStuck);
+            jsonDeadBird.put("shouldCluck", bird.shouldCluck);
             bird.shouldCluck = false;
-            deadBirdsArray.put(jsonBird);
+            deadBirdsArray.put(jsonDeadBird);
         }
         rootObject.put("mamaBirds", mamaBirdsArray);
         rootObject.put("childBirds", childBirdsArray);

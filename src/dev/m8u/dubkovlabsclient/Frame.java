@@ -50,7 +50,9 @@ public class Frame extends JFrame implements ActionListener {
 
     boolean isPaused = false;
 
-    ArrayList<ClientBird> birds;
+    ArrayList<ClientBird> mamaBirds;
+    ArrayList<ClientBird> childBirds;
+    ArrayList<ClientBird> deadBirds;
 
     BufferedImage mamaBirdImage;
     BufferedImage eggImage;
@@ -82,6 +84,10 @@ public class Frame extends JFrame implements ActionListener {
         startTime = Instant.now();
         random = new Random();
 
+        mamaBirds = new ArrayList<>();
+        childBirds = new ArrayList<>();
+        deadBirds = new ArrayList<>();
+
         try {
             mamaBirdImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/mama_bird.png" ));
             eggImage = ImageIO.read(new File(System.getProperty("user.dir") + "/resources/egg.png" ));
@@ -105,7 +111,6 @@ public class Frame extends JFrame implements ActionListener {
             e.printStackTrace();
         }
 
-        birds = new ArrayList<>();
 
         this.setResizable(false);
 
@@ -126,24 +131,39 @@ public class Frame extends JFrame implements ActionListener {
                     for (int x = 0; x < canvas.getWidth(); x+=hayBackgroundImage.getWidth())
                         g2d.drawImage(hayBackgroundImage, x, y, null);
 
-                for (ClientBird bird : birds) {
+                for (ClientBird childBird : childBirds) {
                     AffineTransform old = g2d.getTransform();
-                    g2d.rotate(Math.toRadians(bird.angle),
-                            bird.x-bird.imageWidth/2.0f, bird.y+bird.imageWidth/2.0f);
-                    if (bird.secondsAlive < (int) (bird.lifespan / 10.0f))
-                        g2d.drawImage(eggImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
-                    else if (bird.secondsAlive < (int) (bird.lifespan / 6.0f))
-                        g2d.drawImage(childBirdEggImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
-                    else if (bird.secondsAlive < (int) (bird.lifespan / 3.0f) || bird.imageWidth == 40) {
-                        g2d.drawImage(childBirdImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
-                        if (bird.shouldCluck)
+                    g2d.rotate(Math.toRadians(childBird.angle),
+                            childBird.x - childBird.imageWidth / 2.0f, childBird.y + childBird.imageWidth / 2.0f);
+                    if (childBird.secondsAlive < (int) (childBird.lifespan / 10.0f))
+                        g2d.drawImage(eggImage, childBird.x, childBird.y, -childBird.imageWidth, childBird.imageWidth, null);
+                    else if (childBird.secondsAlive < (int) (childBird.lifespan / 6.0f))
+                        g2d.drawImage(childBirdEggImage, childBird.x, childBird.y, -childBird.imageWidth, childBird.imageWidth, null);
+                    else if (childBird.secondsAlive < (int) (childBird.lifespan / 3.0f) || childBird.imageWidth == 40) {
+                        g2d.drawImage(childBirdImage, childBird.x, childBird.y, -childBird.imageWidth, childBird.imageWidth, null);
+                        if (childBird.shouldCluck)
                             playSound(childBirdSoundFiles[random.nextInt(childBirdSoundFiles.length)]);
-                    } else if (bird.secondsAlive <= bird.lifespan) {
-                        g2d.drawImage(mamaBirdImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
-                        if (bird.shouldCluck)
+                    }
+                    g2d.setTransform(old);
+                }
+
+                for (ClientBird mamaBird : mamaBirds) {
+                    AffineTransform old = g2d.getTransform();
+                    g2d.rotate(Math.toRadians(mamaBird.angle),
+                            mamaBird.x-mamaBird.imageWidth/2.0f, mamaBird.y+mamaBird.imageWidth/2.0f);
+                        if (mamaBird.secondsAlive <= mamaBird.lifespan) {
+                        g2d.drawImage(mamaBirdImage, mamaBird.x, mamaBird.y, -mamaBird.imageWidth, mamaBird.imageWidth, null);
+                        if (mamaBird.shouldCluck)
                             playSound(mamaBirdSoundFiles[random.nextInt(mamaBirdSoundFiles.length)]);
-                    } else
-                        g2d.drawImage(birdSoulImage, bird.x, bird.y, -bird.imageWidth, bird.imageWidth, null);
+                    }
+                    g2d.setTransform(old);
+                }
+
+                for (ClientBird deadBird : deadBirds) {
+                    AffineTransform old = g2d.getTransform();
+                    g2d.rotate(Math.toRadians(deadBird.angle),
+                            deadBird.x-deadBird.imageWidth/2.0f, deadBird.y+deadBird.imageWidth/2.0f);
+                    g2d.drawImage(birdSoulImage, deadBird.x, deadBird.y, -deadBird.imageWidth, deadBird.imageWidth, null);
                     g2d.setTransform(old);
                 }
             }
@@ -379,47 +399,49 @@ public class Frame extends JFrame implements ActionListener {
         birdsLifespan = data.getInt("birdsLifespan");
         lifespanSpinner.setValue(birdsLifespan);
         isPaused = data.getBoolean("isPaused");
-        birds = new ArrayList<>();
-        JSONArray mamaBirds = data.getJSONArray("mamaBirds");
-        JSONArray childBirds = data.getJSONArray("childBirds");
-        JSONArray deadBirds = data.getJSONArray("deadBirds");
+        JSONArray jsonMamaBirds = data.getJSONArray("mamaBirds");
+        JSONArray jsonChildBirds = data.getJSONArray("childBirds");
+        JSONArray jsonDeadBirds = data.getJSONArray("deadBirds");
+        mamaBirds = new ArrayList<>();
+        childBirds = new ArrayList<>();
+        deadBirds = new ArrayList<>();
 
-        for (int i = 0; i < mamaBirds.length(); i++) {
-            JSONObject jsonBird = mamaBirds.getJSONObject(i);
-            birds.add(new ClientBird((jsonBird.getInt("secondsAlive") >= jsonBird.getInt("lifespan") / 3.0f),
-                    jsonBird.getInt("x"),
-                    jsonBird.getInt("y"),
-                    jsonBird.getInt("angle"),
-                    jsonBird.getInt("lifespan"),
-                    jsonBird.getInt("secondsAlive"),
-                    jsonBird.getBoolean("isStuck"),
-                    jsonBird.getBoolean("shouldCluck")));
+        for (int i = 0; i < jsonMamaBirds.length(); i++) {
+            JSONObject jsonMamaBird = jsonMamaBirds.getJSONObject(i);
+            mamaBirds.add(new ClientBird(true,
+                    jsonMamaBird.getInt("x"),
+                    jsonMamaBird.getInt("y"),
+                    jsonMamaBird.getInt("angle"),
+                    jsonMamaBird.getInt("lifespan"),
+                    jsonMamaBird.getInt("secondsAlive"),
+                    jsonMamaBird.getBoolean("isStuck"),
+                    jsonMamaBird.getBoolean("shouldCluck")));
         }
-        for (int i = 0; i < childBirds.length(); i++) {
-            JSONObject jsonBird = childBirds.getJSONObject(i);
-            birds.add(new ClientBird((jsonBird.getInt("secondsAlive") >= jsonBird.getInt("lifespan") / 3.0f),
-                    jsonBird.getInt("x"),
-                    jsonBird.getInt("y"),
-                    jsonBird.getInt("angle"),
-                    jsonBird.getInt("lifespan"),
-                    jsonBird.getInt("secondsAlive"),
-                    jsonBird.getBoolean("isStuck"),
-                    jsonBird.getBoolean("shouldCluck")));
+        for (int i = 0; i < jsonChildBirds.length(); i++) {
+            JSONObject jsonChildBird = jsonChildBirds.getJSONObject(i);
+            childBirds.add(new ClientBird(false,
+                    jsonChildBird.getInt("x"),
+                    jsonChildBird.getInt("y"),
+                    jsonChildBird.getInt("angle"),
+                    jsonChildBird.getInt("lifespan"),
+                    jsonChildBird.getInt("secondsAlive"),
+                    jsonChildBird.getBoolean("isStuck"),
+                    jsonChildBird.getBoolean("shouldCluck")));
         }
-        for (int i = 0; i < deadBirds.length(); i++) {
-            JSONObject jsonBird = deadBirds.getJSONObject(i);
-            birds.add(new ClientBird((jsonBird.getInt("secondsAlive") >= jsonBird.getInt("lifespan") / 3.0f),
-                    jsonBird.getInt("x"),
-                    jsonBird.getInt("y"),
-                    jsonBird.getInt("angle"),
-                    jsonBird.getInt("lifespan"),
-                    jsonBird.getInt("secondsAlive"),
-                    jsonBird.getBoolean("isStuck"),
-                    jsonBird.getBoolean("shouldCluck")));
+        for (int i = 0; i < jsonDeadBirds.length(); i++) {
+            JSONObject jsonDeadBird = jsonDeadBirds.getJSONObject(i);
+            deadBirds.add(new ClientBird(true,
+                    jsonDeadBird.getInt("x"),
+                    jsonDeadBird.getInt("y"),
+                    jsonDeadBird.getInt("angle"),
+                    jsonDeadBird.getInt("lifespan"),
+                    jsonDeadBird.getInt("secondsAlive"),
+                    jsonDeadBird.getBoolean("isStuck"),
+                    jsonDeadBird.getBoolean("shouldCluck")));
         }
 
-        mamaBirdCountLabel.setText("Chicken count: " + mamaBirds.length());
-        childBirdCountLabel.setText("Baby chick count: " + childBirds.length());
+        mamaBirdCountLabel.setText("Chicken count: " + jsonMamaBirds.length());
+        childBirdCountLabel.setText("Baby chick count: " + jsonChildBirds.length());
     }
 
     void submitParamValue(String paramName, int value) {
